@@ -1,0 +1,338 @@
+@import 'tailwindcss';
+@import 'leaflet/dist/leaflet.css';
+
+/* GridPulse design tokens — see week8/day36/WIREFRAMES.md */
+@theme {
+  --color-mist: #f3f5f2;
+  --color-paper: #ffffff;
+  --color-moss: #dce8d9;
+  --color-moss-deep: #c3d6bf;
+  --color-pine: #14312b;
+  --color-pine-soft: #1f473f;
+  --color-pine-mute: #2b5a50;
+  --color-amber: #f2a93b;
+  --color-amber-deep: #d98d1a;
+  --color-teal: #2e8b8b;
+  --color-teal-soft: #d7ecec;
+  --color-ember: #e5533c;
+  --color-ember-soft: #fbe3de;
+  --color-ink: #182320;
+  --color-ink-muted: #5c6b66;
+  --color-ink-faint: #8e9995;
+  --color-line: rgba(20, 49, 43, 0.12);
+  --color-line-strong: rgba(20, 49, 43, 0.24);
+
+  --font-display: 'Bricolage Grotesque', 'Instrument Sans', system-ui, sans-serif;
+  --font-sans: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --radius-panel: 16px;
+  --radius-control: 8px;
+  --radius-chip: 6px;
+}
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  /* Topographic contour lines: a nod to the valleys the fleet sits in. Very faint. */
+  background-color: var(--color-mist);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='420' viewBox='0 0 420 420'%3E%3Cg fill='none' stroke='%2314312B' stroke-opacity='0.055' stroke-width='1'%3E%3Cpath d='M-20 120c60-40 120-60 200-40s120 60 260 20'/%3E%3Cpath d='M-20 160c70-40 130-56 210-36s130 56 250 16'/%3E%3Cpath d='M-20 200c80-40 140-52 220-32s140 52 240 12'/%3E%3Cpath d='M-20 240c90-40 150-48 230-28s150 48 230 8'/%3E%3Cpath d='M-20 280c100-40 160-44 240-24s160 44 220 4'/%3E%3Cpath d='M-20 320c110-40 170-40 250-20s170 40 210 0'/%3E%3Cpath d='M-20 40c50-30 110-40 190-24s110 40 260 10'/%3E%3Cpath d='M-20 80c55-35 115-50 195-32s115 50 255 15'/%3E%3Cpath d='M-20 360c120-40 180-36 260-16s180 36 200-4'/%3E%3Cpath d='M-20 400c130-40 190-32 270-12s190 32 190-8'/%3E%3C/g%3E%3C/svg%3E");
+  background-attachment: fixed;
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3,
+.font-display {
+  font-family: var(--font-display);
+  font-variation-settings: 'opsz' 96;
+  letter-spacing: -0.01em;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--color-amber);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+::selection {
+  background: rgba(242, 169, 59, 0.35);
+}
+
+/* Component classes live in the components layer so Tailwind utilities can still override them. */
+@layer components {
+/* Panels — hairline border, no shadow */
+.panel {
+  background: var(--color-paper);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-panel);
+}
+.chitral-strip {
+  height: 6px;
+  background-image: repeating-linear-gradient(135deg, #F2A93B 0 8px, transparent 8px 16px, #7FC4C4 16px 24px, transparent 24px 32px);
+  opacity: 0.85;
+}
+.panel-dark {
+  background:
+    radial-gradient(900px 320px at 78% -20%, rgba(242, 169, 59, 0.16), transparent 60%),
+    linear-gradient(160deg, #163730 0%, #14312B 55%, #0F2723 100%);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-panel);
+}
+.card-link {
+  transition: border-color 140ms ease, transform 140ms ease;
+}
+.card-link:hover {
+  border-color: var(--color-pine-mute);
+  transform: translateY(-1px);
+}
+.hero-chart .recharts-area-curve {
+  filter: drop-shadow(0 0 5px rgba(242, 169, 59, 0.7));
+}
+
+/* Skeleton loaders */
+@keyframes gp-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, rgba(20,49,43,0.06) 25%, rgba(20,49,43,0.12) 50%, rgba(20,49,43,0.06) 75%);
+  background-size: 200% 100%;
+  animation: gp-shimmer 1.4s ease-in-out infinite;
+}
+
+/* Kanban drag states */
+.drop-target {
+  outline: 2px dashed var(--color-teal);
+  outline-offset: -4px;
+  background: rgba(46, 139, 139, 0.06);
+}
+.dragging {
+  opacity: 0.45;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: var(--radius-chip);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+/* Inputs */
+.field {
+  width: 100%;
+  background: var(--color-paper);
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-control);
+  padding: 9px 12px;
+  font: inherit;
+  color: var(--color-ink);
+  transition: border-color 120ms ease;
+}
+.field::placeholder {
+  color: var(--color-ink-faint);
+}
+.field:hover {
+  border-color: var(--color-pine-mute);
+}
+.field:focus {
+  outline: none;
+  border-color: var(--color-pine);
+  box-shadow: 0 0 0 3px rgba(242, 169, 59, 0.35);
+}
+.field[aria-invalid='true'] {
+  border-color: var(--color-ember);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: var(--radius-control);
+  padding: 9px 14px;
+  font: inherit;
+  font-weight: 500;
+  line-height: 20px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+  white-space: nowrap;
+}
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.btn-primary {
+  background: var(--color-pine);
+  color: #fff;
+}
+.btn-primary:hover:not(:disabled) {
+  background: var(--color-pine-soft);
+}
+.btn-secondary {
+  background: var(--color-paper);
+  color: var(--color-pine);
+  border-color: var(--color-line-strong);
+}
+.btn-secondary:hover:not(:disabled) {
+  background: var(--color-moss);
+}
+.btn-ghost {
+  background: transparent;
+  color: var(--color-pine);
+}
+.btn-ghost:hover:not(:disabled) {
+  background: var(--color-moss);
+}
+.btn-danger {
+  background: var(--color-ember);
+  color: #fff;
+}
+.btn-danger:hover:not(:disabled) {
+  background: #c9432e;
+}
+.btn-sm {
+  padding: 5px 10px;
+  font-size: 13px;
+}
+
+/* Table */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+.table th {
+  text-align: left;
+  font-weight: 500;
+  color: var(--color-ink-muted);
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--color-line);
+  white-space: nowrap;
+}
+.table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--color-line);
+  vertical-align: middle;
+}
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.table tbody tr:hover {
+  background: rgba(220, 232, 217, 0.35);
+}
+
+}
+
+/* Live pulse */
+@keyframes gp-pulse {
+  0% { transform: scale(1); opacity: 0.9; }
+  70% { transform: scale(2.2); opacity: 0; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+.pulse-dot {
+  position: relative;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--color-amber);
+}
+.pulse-dot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: var(--color-amber);
+  animation: gp-pulse 1.8s ease-out infinite;
+}
+
+/* One orchestrated page-load moment on the overview */
+@keyframes gp-rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.rise {
+  animation: gp-rise 480ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.rise-2 { animation-delay: 120ms; }
+.rise-3 { animation-delay: 220ms; }
+.rise-4 { animation-delay: 320ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse-dot::after { animation: none; }
+  .rise { animation: none; }
+  .skeleton { animation: none; }
+  * { transition-duration: 0ms !important; }
+}
+
+/* Leaflet overrides to match the palette */
+.leaflet-container {
+  font-family: var(--font-sans);
+  background: var(--color-moss);
+  border-radius: var(--radius-panel);
+}
+.leaflet-popup-content-wrapper {
+  border-radius: var(--radius-control);
+  border: 1px solid var(--color-line);
+  box-shadow: none;
+}
+.leaflet-popup-tip {
+  box-shadow: none;
+}
+.leaflet-bar a {
+  color: var(--color-pine);
+}
+.map-tiles {
+  filter: saturate(0.25) contrast(0.92) brightness(1.04);
+}
+.gp-label {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(20, 49, 43, 0.15);
+  border-radius: 6px;
+  box-shadow: none;
+  color: var(--color-ink);
+  font-size: 11.5px;
+  padding: 2px 7px;
+}
+.gp-label::before {
+  display: none;
+}
+.leaflet-container {
+  isolation: isolate;
+}
+.leaflet-control-attribution {
+  font-size: 10px;
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--color-ink-faint);
+}
+
+/* Scrollbar, subtle */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-moss-deep) transparent;
+}

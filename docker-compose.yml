@@ -1,0 +1,56 @@
+# GridPulse local stack: MySQL + Laravel API (with the telemetry scheduler) + React client behind nginx.
+#   cp .env.docker.example .env && edit APP_KEY, then: docker compose up --build
+#   open http://localhost:3000   (API at http://localhost:8000/api/v1)
+services:
+  db:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: gridpulse
+      MYSQL_USER: gridpulse
+      MYSQL_PASSWORD: gridpulse
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build: ./api
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_KEY: ${APP_KEY:?Set APP_KEY in a root .env file (generate one with: cd api && php artisan key:generate --show)}
+      APP_URL: http://localhost:8000
+      CLIENT_ORIGIN: http://localhost:3000
+      DB_CONNECTION: mysql
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: gridpulse
+      DB_USERNAME: gridpulse
+      DB_PASSWORD: gridpulse
+      CACHE_STORE: database
+      SESSION_DRIVER: database
+      QUEUE_CONNECTION: database
+      LOG_CHANNEL: stderr
+      SEED_DEMO: "true"
+    ports:
+      - "8000:8000"
+
+  client:
+    build:
+      context: ./client
+      args:
+        VITE_API_URL: http://localhost:8000
+    depends_on:
+      - api
+    ports:
+      - "3000:80"
+
+volumes:
+  mysql-data:

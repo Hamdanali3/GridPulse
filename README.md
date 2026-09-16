@@ -198,18 +198,37 @@ PHP host with a database and a running scheduler, so it goes to Railway, Render,
 If you skip step 3 the site loads but sign-in fails with
 "API origin is not configured. Set VITE_API_URL on the hosting platform and redeploy."
 
-### Deploy the API (Railway example)
+### Deploy the API to Railway
 
-1. New project → Deploy from GitHub → **Root Directory `api`** → add the MySQL plugin.
-2. Variables: `APP_KEY` (from `php artisan key:generate --show`), `APP_ENV=production`, `APP_DEBUG=false`,
-   `APP_URL=https://<api-domain>`, `DB_CONNECTION=mysql` + the five `DB_*` values from the plugin,
-   `CACHE_STORE=database`, `SESSION_DRIVER=database`, `QUEUE_CONNECTION=database`,
-   `CLIENT_ORIGIN=https://<your-vercel-domain>.vercel.app` (comma-separate several origins).
-3. Start command:
-   `php artisan migrate --force && php artisan config:cache && php artisan serve --host=0.0.0.0 --port=$PORT`
-4. Add a second service from the same repo with start command `php artisan schedule:work`
-   (the telemetry simulator). Run `php artisan db:seed --force` once from the shell for the demo fleet.
-5. Check `https://<api-domain>/api/v1/health` returns `{"status":"ok","db":"connected"}`.
+The API ships as one Docker image (`api/Dockerfile`): migrations, demo seed, the telemetry scheduler and
+the HTTP server all run in a single container that listens on Railway's `PORT`.
+
+1. [railway.com](https://railway.com) → **New Project → Deploy from GitHub repo** → `Hamdanali3/GridPulse`.
+2. Open the service → **Settings → Root Directory** = `api`. Railway picks up `api/railway.json`
+   (Dockerfile builder, health check on `/api/v1/health`).
+3. **Settings → Networking → Generate Domain**. Port `8000`.
+4. In the project canvas **+ New → Database → MySQL** (Postgres works too).
+5. Back on the API service → **Variables** → add:
+
+   | Variable | Value |
+   | --- | --- |
+   | `DB_URL` | `${{MySQL.MYSQL_URL}}` (click *Add Reference*; Postgres: `${{Postgres.DATABASE_URL}}`) |
+   | `APP_KEY` | output of `cd api && php artisan key:generate --show` |
+   | `APP_URL` | `https://<the domain from step 3>` |
+   | `CLIENT_ORIGIN` | `https://<your-app>.vercel.app,https://*.vercel.app` |
+
+   Everything else has a production default baked into the image (`APP_ENV=production`,
+   `APP_DEBUG=false`, `LOG_CHANNEL=stderr`, `SEED_DEMO=true`). Optional: `SEED_DEMO=false`,
+   `PHP_CLI_SERVER_WORKERS=8`, `GRIDPULSE_RETENTION_DAYS=7`.
+6. Redeploy. First boot migrates and seeds the Chitral fleet (about 15 seconds), then the log says
+   `listening on 0.0.0.0:8000`. Open `https://<domain>/api/v1/health` → `{"status":"ok","db":"connected"}`.
+7. In Vercel set `VITE_API_URL=https://<domain>` (no trailing slash) → **Redeploy** the client.
+   Sign in with `admin@gridpulse.io` / `Admin12345`.
+
+No database plugin? The container falls back to SQLite inside the image. It works, but data resets on every
+deploy. Mount a Railway **Volume** at `/app/database` to keep it.
+
+The same image runs anywhere: `docker build -t gridpulse-api api && docker run -p 8000:8000 gridpulse-api`.
 
 ### Vercel troubleshooting
 
@@ -219,7 +238,10 @@ If you skip step 3 the site loads but sign-in fails with
 | "No Output Directory named 'dist' found" | Root Directory set to `/` with an old build config | Same as above |
 | Build fails on `tsc -b` | Node < 20 | Project Settings → Node.js Version → 20.x or 22.x |
 | Sign-in says "API origin is not configured" | `VITE_API_URL` missing at build time | Add the variable, then **Redeploy** |
-| Sign-in says "Cannot reach the server" or CORS error in console | API down, or `CLIENT_ORIGIN` on the API does not include the Vercel domain | Fix `CLIENT_ORIGIN`, restart the API |
+| Sign-in says "Cannot reach the server" or CORS error in console | API down, or `CLIENT_ORIGIN` on the API does not include the Vercel domain | Fix `CLIENT_ORIGIN` on Railway (wildcards like `https://*.vercel.app` are allowed), redeploy the API |
+| Railway log: "Database not reachable" | `DB_URL` missing or not a reference to the MySQL service | Variables → `DB_URL` = `${{MySQL.MYSQL_URL}}` |
+| Railway log: "APP_KEY not set — generated a temporary one" | No `APP_KEY` variable | Add it; tokens survive restarts once it is fixed |
+| Railway health check fails | Root Directory not `api`, or DB still booting | Set Root Directory, redeploy after MySQL is green |
 | Refreshing `/sites/3` gives 404 | Missing rewrite | Make sure `vercel.json` is deployed |
 
 Full detail, Docker and production checklist: [../day39/DEPLOYMENT_GUIDE.md](../day39/DEPLOYMENT_GUIDE.md).

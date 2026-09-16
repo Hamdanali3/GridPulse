@@ -181,8 +181,48 @@ Enforced server-side by the `role:` middleware on every write route; the client 
 
 ## Deployment
 
-See [../day39/DEPLOYMENT_GUIDE.md](../day39/DEPLOYMENT_GUIDE.md): Railway or Render for the API with
-MySQL, Vercel for the client, environment variables and the scheduler process.
+GridPulse is two deployables. Vercel hosts the **web app** (static Vite build). The **Laravel API** needs a
+PHP host with a database and a running scheduler, so it goes to Railway, Render, Fly.io or any Docker host
+(`api/Dockerfile`). Vercel cannot run the API.
+
+### Deploy the web app to Vercel
+
+1. Vercel → **Add New… → Project** → import `Hamdanali3/GridPulse`.
+2. Leave **Root Directory** as `/` (the root `vercel.json` builds `client/` for you), **or** set it to `client`.
+   Both work. Do not point it at `api`.
+3. **Environment Variables** → add `VITE_API_URL` = the public origin of your API, no trailing slash,
+   for example `https://gridpulse-api.up.railway.app`. Vite bakes this in at build time, so add it
+   **before** the first deploy (or redeploy after adding it).
+4. Deploy. Client routes such as `/sites/3` fall back to `index.html` through the rewrite in `vercel.json`.
+
+If you skip step 3 the site loads but sign-in fails with
+"API origin is not configured. Set VITE_API_URL on the hosting platform and redeploy."
+
+### Deploy the API (Railway example)
+
+1. New project → Deploy from GitHub → **Root Directory `api`** → add the MySQL plugin.
+2. Variables: `APP_KEY` (from `php artisan key:generate --show`), `APP_ENV=production`, `APP_DEBUG=false`,
+   `APP_URL=https://<api-domain>`, `DB_CONNECTION=mysql` + the five `DB_*` values from the plugin,
+   `CACHE_STORE=database`, `SESSION_DRIVER=database`, `QUEUE_CONNECTION=database`,
+   `CLIENT_ORIGIN=https://<your-vercel-domain>.vercel.app` (comma-separate several origins).
+3. Start command:
+   `php artisan migrate --force && php artisan config:cache && php artisan serve --host=0.0.0.0 --port=$PORT`
+4. Add a second service from the same repo with start command `php artisan schedule:work`
+   (the telemetry simulator). Run `php artisan db:seed --force` once from the shell for the demo fleet.
+5. Check `https://<api-domain>/api/v1/health` returns `{"status":"ok","db":"connected"}`.
+
+### Vercel troubleshooting
+
+| Symptom | Cause | Fix |
+| --- | --- | --- |
+| `404: NOT_FOUND` on the deployed URL | Project imported at repo root before the root `vercel.json` existed, so nothing was built | Pull latest `main` and redeploy, or set Root Directory to `client` |
+| "No Output Directory named 'dist' found" | Root Directory set to `/` with an old build config | Same as above |
+| Build fails on `tsc -b` | Node < 20 | Project Settings → Node.js Version → 20.x or 22.x |
+| Sign-in says "API origin is not configured" | `VITE_API_URL` missing at build time | Add the variable, then **Redeploy** |
+| Sign-in says "Cannot reach the server" or CORS error in console | API down, or `CLIENT_ORIGIN` on the API does not include the Vercel domain | Fix `CLIENT_ORIGIN`, restart the API |
+| Refreshing `/sites/3` gives 404 | Missing rewrite | Make sure `vercel.json` is deployed |
+
+Full detail, Docker and production checklist: [../day39/DEPLOYMENT_GUIDE.md](../day39/DEPLOYMENT_GUIDE.md).
 
 ## Author
 

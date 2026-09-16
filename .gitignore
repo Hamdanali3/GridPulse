@@ -27,3 +27,6 @@ api/auth.json
 
 # Docker
 docker/mysql-data
+
+# TypeScript incremental build state
+*.tsbuildinfo

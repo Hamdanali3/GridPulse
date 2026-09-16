@@ -64,7 +64,11 @@ export function errorMessage(err: unknown, fallback = 'Something went wrong. Try
     }
     if (body?.error?.message) return body.error.message;
     if (err.code === 'ECONNABORTED') return 'The server took too long to respond.';
-    if (!err.response) return 'Cannot reach the server. Is the API running?';
+    if (!err.response) {
+      return import.meta.env.PROD && !import.meta.env.VITE_API_URL
+        ? 'API origin is not configured. Set VITE_API_URL on the hosting platform and redeploy.'
+        : 'Cannot reach the server. Is the API running?';
+    }
   }
   return fallback;
 }

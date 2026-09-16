@@ -35,17 +35,24 @@ export default function AuthShell({ title, subtitle, children, footer }: { title
         <p className="absolute bottom-4 right-6 z-10 text-[11.5px] text-white/40">Chitral · {clock.time}</p>
       </aside>
 
-      <main className="flex items-center justify-center px-6 py-12">
-        <div className="w-full max-w-[400px]">
-          <div className="mb-8 flex items-center gap-2.5 lg:hidden">
-            <Logo size={30} />
-            <span className="font-display text-[19px] font-semibold text-pine">GridPulse</span>
-          </div>
+      <main className="flex flex-col px-6 py-8">
+        <div className="flex items-center gap-2.5 lg:hidden">
+          <Logo size={30} />
+          <span className="font-display text-[19px] font-semibold text-pine">GridPulse</span>
+        </div>
+        <div className="my-auto w-full max-w-[400px] self-center py-10">
           <h1 className="text-[28px] font-semibold text-pine">{title}</h1>
           <p className="mt-1.5 text-ink-muted">{subtitle}</p>
           <div className="mt-8">{children}</div>
           <p className="mt-8 text-[13.5px] text-ink-muted">{footer}</p>
         </div>
+        <footer className="flex w-full max-w-[400px] flex-wrap items-center justify-between gap-x-4 gap-y-1 self-center text-[12px] text-ink-faint">
+          <span>© 2026 GridPulse · Chitral, Khyber Pakhtunkhwa</span>
+          <span>
+            Demo data only ·{' '}
+            <a href="https://github.com/Hamdanali3/GridPulse" target="_blank" rel="noreferrer" className="transition-colors hover:text-pine">GitHub</a>
+          </span>
+        </footer>
       </main>
     </div>
   );

@@ -2,6 +2,8 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { clsx } from 'clsx';
 import { useQuery } from '@tanstack/react-query';
 import { Activity, Bell, ClipboardList, Cpu, FileBarChart, LogOut, MapPinned, Moon, Settings, ShieldCheck, Sun, Users } from 'lucide-react';
+import Logo from '../components/Logo';
+import AppFooter from '../components/AppFooter';
 import { useAuth } from '../lib/auth';
 import { get, getPaged } from '../lib/api';
 import type { Alert, FleetLive } from '../lib/types';
@@ -17,9 +19,16 @@ const nav = [
   { to: '/reports', label: 'Reports', icon: FileBarChart },
 ];
 
-const titles: Record<string, string> = {
-  '/': 'Overview', '/sites': 'Sites', '/assets': 'Assets', '/alerts': 'Alerts', '/work-orders': 'Work orders',
-  '/reports': 'Reports', '/team': 'Team', '/audit': 'Audit log', '/settings': 'Settings',
+const sections: Record<string, { title: string; blurb: string }> = {
+  '/': { title: 'Overview', blurb: 'Fleet output, open alerts and today\'s energy across Chitral' },
+  '/sites': { title: 'Sites', blurb: 'Eleven plants across Upper and Lower Chitral' },
+  '/assets': { title: 'Assets', blurb: 'Turbines, inverters and units, plant by plant' },
+  '/alerts': { title: 'Alerts', blurb: 'Rules fired on live telemetry, newest first' },
+  '/work-orders': { title: 'Work orders', blurb: 'Maintenance from planned to done' },
+  '/reports': { title: 'Reports', blurb: 'Energy and availability, by day and by plant' },
+  '/team': { title: 'Team', blurb: 'Accounts and what each role may do' },
+  '/audit': { title: 'Audit log', blurb: 'Who changed what, and when' },
+  '/settings': { title: 'Settings', blurb: 'Your profile and password' },
 };
 
 export default function AppLayout() {
@@ -44,7 +53,7 @@ export default function AppLayout() {
 
   const items = [...nav, ...(can('admin') ? [{ to: '/team', label: 'Team', icon: Users }, { to: '/audit', label: 'Audit log', icon: ShieldCheck }] : [])];
   const section = '/' + (location.pathname.split('/')[1] ?? '');
-  const title = titles[section] ?? 'GridPulse';
+  const meta = sections[section] ?? { title: 'GridPulse', blurb: 'Chitral district fleet' };
   const stale = live.data?.recorded_at ? Date.now() - new Date(live.data.recorded_at).getTime() > 60_000 : true;
 
   return (
@@ -114,27 +123,45 @@ export default function AppLayout() {
 
       {/* Content */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-line bg-mist/85 px-4 py-2.5 backdrop-blur md:px-8">
-          <div className="flex items-center gap-2 md:hidden">
-            <Logo size={24} />
-            <span className="font-display text-[16px] font-semibold text-pine">GridPulse</span>
-          </div>
-          <p className="hidden text-[13.5px] text-ink-muted md:block">
-            <span className="font-medium text-pine">{title}</span>
-            <span className="mx-2 text-ink-faint">/</span>Chitral district fleet
-          </p>
-          <div className="flex items-center gap-3 text-[13px] text-ink-muted">
-            <span className="hidden items-center gap-1.5 sm:inline-flex" title="Chitral local time">
-              {daylight ? <Sun className="h-3.5 w-3.5 text-amber" /> : <Moon className="h-3.5 w-3.5 text-teal" />}
-              <span className="tabular font-medium text-pine">{clock.time}</span>
-              <span>{clock.date} · Chitral</span>
-            </span>
-            <button onClick={handleLogout} className="btn btn-ghost btn-sm md:hidden">Log out</button>
+        <header className="sticky top-0 z-30 border-b border-line bg-mist/85 backdrop-blur">
+          <div className="flex items-center justify-between gap-3 px-4 py-2.5 md:px-8 md:py-3">
+            <div className="flex items-center gap-2 md:hidden">
+              <Logo size={24} />
+              <span className="font-display text-[16px] font-semibold text-pine">GridPulse</span>
+            </div>
+            <div className="hidden min-w-0 md:block">
+              <p className="truncate font-display text-[17px] font-semibold leading-tight text-pine">{meta.title}</p>
+              <p className="truncate text-[12.5px] text-ink-muted">{meta.blurb}</p>
+            </div>
+            <div className="flex items-center gap-2 text-[13px] text-ink-muted md:gap-3">
+              <span className="hidden items-center gap-1.5 lg:inline-flex" title="Chitral local time">
+                {daylight ? <Sun className="h-3.5 w-3.5 text-amber" /> : <Moon className="h-3.5 w-3.5 text-teal" />}
+                <span className="tabular font-medium text-pine">{clock.time}</span>
+                <span>{clock.date}, Chitral</span>
+              </span>
+              <NavLink
+                to="/alerts"
+                className="relative inline-flex h-9 w-9 items-center justify-center rounded-control border border-line bg-paper text-pine transition-colors hover:bg-moss"
+                aria-label={openAlerts.data ? `${openAlerts.data} open alerts` : 'Alerts'}
+              >
+                <Bell className="h-[17px] w-[17px]" strokeWidth={1.75} />
+                {!!openAlerts.data && (
+                  <span className="tabular absolute -right-1.5 -top-1.5 min-w-[18px] rounded-chip bg-ember px-1 text-center text-[11px] font-semibold leading-[18px] text-white">
+                    {openAlerts.data}
+                  </span>
+                )}
+              </NavLink>
+              <span className="hidden h-9 w-9 items-center justify-center rounded-full bg-pine font-display text-[13px] font-semibold text-amber md:inline-flex" title={`${user?.name} · ${user?.role}`}>
+                {user?.name?.slice(0, 1).toUpperCase()}
+              </span>
+              <button onClick={handleLogout} className="btn btn-ghost btn-sm md:hidden">Log out</button>
+            </div>
           </div>
         </header>
-        <main className="flex-1 px-4 pb-24 pt-5 md:px-8 md:pb-10 md:pt-6" key={location.pathname}>
+        <main className="flex-1 px-4 pb-12 pt-5 md:px-8 md:pb-14 md:pt-6" key={location.pathname}>
           <Outlet />
         </main>
+        <AppFooter lastReadingAt={live.data?.recorded_at} />
       </div>
 
       {/* Mobile tab bar */}
@@ -150,12 +177,4 @@ export default function AppLayout() {
   );
 }
 
-export function Logo({ size = 28 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden>
-      <rect width="32" height="32" rx="8" fill="#F2A93B" />
-      <path d="M6 21 L11 13 L15 18 L20 9 L26 19" fill="none" stroke="#14312B" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx="26" cy="19" r="2.4" fill="#14312B" />
-    </svg>
-  );
-}
+export { default as Logo } from '../components/Logo';

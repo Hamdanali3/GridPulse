@@ -6,7 +6,7 @@ WORKDIR /app
 COPY composer.json composer.lock ./
 RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist --no-interaction
 
-FROM php:8.3-cli-alpine
+FROM php:8.4-cli-alpine
 RUN apk add --no-cache icu-dev libzip-dev oniguruma-dev postgresql-dev bash \
     && docker-php-ext-install pdo_mysql pdo_pgsql intl bcmath opcache \
     && printf 'opcache.enable_cli=1\nopcache.memory_consumption=128\nopcache.validate_timestamps=0\n' \

@@ -39,7 +39,7 @@ turns every alert into tracked work.
 
 | Layer | Choice |
 | --- | --- |
-| API | Laravel 12, PHP 8.3+, Laravel Sanctum tokens, Form Requests, API Resources, PHPUnit |
+| API | Laravel 12, PHP 8.4+, Laravel Sanctum tokens, Form Requests, API Resources, PHPUnit |
 | Database | SQLite for development and tests; MySQL 8 for production (all queries are driver-portable) |
 | Client | React 18, TypeScript, Vite, React Router, TanStack Query, React Hook Form + Zod, Recharts, Leaflet, Tailwind CSS v4 |
 | Ops | Docker Compose (MySQL + API + nginx client), GitHub Actions CI |
@@ -50,7 +50,7 @@ turns every alert into tracked work.
 
 | Tool | Version | Check | Install |
 | --- | --- | --- | --- |
-| PHP | 8.3 or newer | `php -v` | macOS: `brew install php` · Windows: [XAMPP](https://www.apachefriends.org/) or [Laravel Herd](https://herd.laravel.com/) · Ubuntu: `sudo apt install php8.3 php8.3-sqlite3 php8.3-mbstring php8.3-xml php8.3-intl php8.3-curl` |
+| PHP | 8.4 or newer | `php -v` | macOS: `brew install php` · Windows: [XAMPP](https://www.apachefriends.org/) or [Laravel Herd](https://herd.laravel.com/) · Ubuntu: `sudo apt install php8.4 php8.4-sqlite3 php8.4-mbstring php8.4-xml php8.4-intl php8.4-curl` |
 | Composer | 2.x | `composer -V` | https://getcomposer.org/download/ |
 | Node.js | 20 or newer | `node -v` | https://nodejs.org (LTS) |
 | Git | any | `git -v` | https://git-scm.com |

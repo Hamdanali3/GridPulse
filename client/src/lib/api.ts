@@ -1,6 +1,14 @@
 import axios, { AxiosError } from 'axios';
 
-export const API_URL = `${(import.meta.env.VITE_API_URL as string | undefined) ?? ''}/api/v1`;
+/** Origin of the Laravel API. Tolerates copy-paste noise: surrounding spaces, trailing slashes, trailing notes. */
+function apiOrigin(): string {
+  const raw = ((import.meta.env.VITE_API_URL as string | undefined) ?? '').trim();
+  const first = raw.split(/\s+/)[0] ?? '';
+  return first.replace(/\/+$/, '').replace(/\/api\/v1$/, '');
+}
+
+export const API_ORIGIN = apiOrigin();
+export const API_URL = `${API_ORIGIN}/api/v1`;
 
 const TOKEN_KEY = 'gp_token';
 

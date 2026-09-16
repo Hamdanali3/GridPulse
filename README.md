@@ -249,5 +249,5 @@ Full detail, Docker and production checklist: [../day39/DEPLOYMENT_GUIDE.md](../
 
 ## Author
 
-Muhammad Zafar — Week 8 capstone. Planning documents, day-by-day notes and the presentation are in the
+Hamdan Ali — Week 8 capstone. Planning documents, day-by-day notes and the presentation are in the
 sibling `day36` … `day40` folders.

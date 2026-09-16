@@ -26,7 +26,7 @@ Radii: panel 16px · control 8px · chip 6px. Borders: 1px `rgba(20,49,43,.12)`.
 
 ```
 ┌────────────┬───────────────────────────────────────────────────────────┐
-│  GridPulse │  Fleet overview                        ● live   Zafar ▾  │
+│  GridPulse │  Fleet overview                        ● live  Hamdan ▾  │
 │            ├───────────────────────────────────────────────────────────┤
 │  Overview  │                                                           │
 │  Sites     │   [ content canvas — mist background, 24px gutter ]       │

@@ -81,7 +81,7 @@ export default function AppFooter({ lastReadingAt }: { lastReadingAt?: string | 
         </div>
 
         <div className="flex flex-col gap-2 border-t border-line py-4 text-[12.5px] text-ink-faint sm:flex-row sm:items-center sm:justify-between">
-          <p>© 2026 GridPulse. Built by Muhammad Zafar, Week 8 capstone.</p>
+          <p>© 2026 GridPulse. Built by Hamdan Ali, Week 8 capstone.</p>
           <p className="flex items-center gap-4">
             <a href="https://github.com/Hamdanali3/GridPulse" target="_blank" rel="noreferrer" className="transition-colors hover:text-pine">Source on GitHub</a>
             <span className="tabular">v{__APP_VERSION__}</span>

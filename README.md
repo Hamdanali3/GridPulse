@@ -138,7 +138,7 @@ The API container migrates, seeds the demo fleet on first boot, runs the schedul
 ## Tests
 
 ```bash
-cd api && php artisan test      # 30 feature tests, 222 assertions
+cd api && php artisan test      # 30 feature + 6 unit tests, 235 assertions
 cd client && npm run lint && npm run build
 ```
 

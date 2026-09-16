@@ -204,8 +204,9 @@ The API ships as one Docker image (`api/Dockerfile`): migrations, demo seed, the
 the HTTP server all run in a single container that listens on Railway's `PORT`.
 
 1. [railway.com](https://railway.com) → **New Project → Deploy from GitHub repo** → `Hamdanali3/GridPulse`.
-2. Open the service → **Settings → Root Directory** = `api`. Railway picks up `api/railway.json`
-   (Dockerfile builder, health check on `/api/v1/health`).
+2. Open the service → **Settings → Root Directory** = `api` (recommended). Railway then uses
+   `api/railway.json` + `api/Dockerfile`. If you leave Root Directory at `/`, the root `railway.json` +
+   root `Dockerfile` build the same API image, so either setting works. Never pick `client`.
 3. **Settings → Networking → Generate Domain**. Port `8000`.
 4. In the project canvas **+ New → Database → MySQL** (Postgres works too).
 5. Back on the API service → **Variables** → add:

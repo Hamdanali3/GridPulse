@@ -64,10 +64,18 @@ export function errorMessage(err: unknown, fallback = 'Something went wrong. Try
     }
     if (body?.error?.message) return body.error.message;
     if (err.code === 'ECONNABORTED') return 'The server took too long to respond.';
+    const misconfigured = import.meta.env.PROD && !import.meta.env.VITE_API_URL;
     if (!err.response) {
-      return import.meta.env.PROD && !import.meta.env.VITE_API_URL
+      return misconfigured
         ? 'API origin is not configured. Set VITE_API_URL on the hosting platform and redeploy.'
         : 'Cannot reach the server. Is the API running?';
+    }
+    // A reply that is not our JSON envelope means the request never reached the Laravel API
+    // (static host answered instead, wrong VITE_API_URL, proxy in front of the API...).
+    if (!body || typeof body !== 'object' || !('success' in body)) {
+      return misconfigured
+        ? 'API origin is not configured. Set VITE_API_URL on the hosting platform and redeploy.'
+        : `The API address answered with HTTP ${err.response.status} instead of JSON. Check VITE_API_URL.`;
     }
   }
   return fallback;

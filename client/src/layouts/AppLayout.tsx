@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Activity, Bell, ClipboardList, Cpu, FileBarChart, LogOut, MapPinned, Moon, Settings, ShieldCheck, Sun, Users } from 'lucide-react';
 import Logo from '../components/Logo';
 import AppFooter from '../components/AppFooter';
+import UserMenu from '../components/UserMenu';
 import { useAuth } from '../lib/auth';
 import { get, getPaged } from '../lib/api';
 import type { Alert, FleetLive } from '../lib/types';
@@ -151,10 +152,7 @@ export default function AppLayout() {
                   </span>
                 )}
               </NavLink>
-              <span className="hidden h-9 w-9 items-center justify-center rounded-full bg-pine font-display text-[13px] font-semibold text-amber md:inline-flex" title={`${user?.name} · ${user?.role}`}>
-                {user?.name?.slice(0, 1).toUpperCase()}
-              </span>
-              <button onClick={handleLogout} className="btn btn-ghost btn-sm md:hidden">Log out</button>
+              <UserMenu user={user} onLogout={handleLogout} />
             </div>
           </div>
         </header>

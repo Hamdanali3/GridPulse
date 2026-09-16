@@ -26,7 +26,7 @@ use Illuminate\Database\Seeder;
 class DemoFleetSeeder extends Seeder
 {
     public const ACCOUNTS = [
-        ['name' => 'Muhammad Zafar', 'email' => 'admin@gridpulse.io', 'password' => 'Admin12345', 'role' => Role::Admin],
+        ['name' => 'Hamdan Ali', 'email' => 'admin@gridpulse.io', 'password' => 'Admin12345', 'role' => Role::Admin],
         ['name' => 'Shahzada Iqbal', 'email' => 'engineer@gridpulse.io', 'password' => 'Engineer12345', 'role' => Role::Engineer],
         ['name' => 'Sadia Rehman', 'email' => 'viewer@gridpulse.io', 'password' => 'Viewer12345', 'role' => Role::Viewer],
     ];

@@ -14,6 +14,7 @@ import TeamPage from './pages/TeamPage';
 import AuditPage from './pages/AuditPage';
 import SettingsPage from './pages/SettingsPage';
 import NotFoundPage from './pages/NotFoundPage';
+import LandingPage from './pages/LandingPage';
 import type { Role } from './lib/types';
 import { Spinner } from './components/ui';
 
@@ -21,7 +22,12 @@ function RequireAuth({ children, roles }: { children: JSX.Element; roles?: Role[
   const { user, loading } = useAuth();
   const location = useLocation();
   if (loading) return <div className="flex h-full items-center justify-center"><Spinner label="Checking your session" /></div>;
-  if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  if (!user) {
+    // The root path has a public marketing page for logged-out visitors — everything else
+    // (sites, alerts, settings, ...) still bounces to /login as before.
+    if (location.pathname === '/') return <LandingPage />;
+    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  }
   if (roles && !roles.includes(user.role)) return <Navigate to="/" replace />;
   return children;
 }

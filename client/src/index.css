@@ -40,6 +40,16 @@ body,
   height: 100%;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
 body {
   margin: 0;
   /* Topographic contour lines: a nod to the valleys the fleet sits in. Very faint. */
@@ -107,6 +117,25 @@ h3,
 }
 .hero-chart .recharts-area-curve {
   filter: drop-shadow(0 0 5px rgba(242, 169, 59, 0.7));
+}
+
+/* Scroll-reveal for the landing page: fade + rise once, on first intersection. */
+.reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 650ms ease, transform 650ms ease;
+  will-change: opacity, transform;
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
 }
 
 /* Skeleton loaders */

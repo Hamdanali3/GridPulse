@@ -58,17 +58,17 @@ export default function AppLayout() {
   const stale = live.data?.recorded_at ? Date.now() - new Date(live.data.recorded_at).getTime() > 60_000 : true;
 
   return (
-    <div className="flex min-h-full">
+    <div className="flex h-screen h-dvh overflow-hidden">
       {/* Rail */}
-      <aside className="hidden w-[232px] shrink-0 flex-col bg-pine text-white md:flex">
-        <div className="flex items-center gap-2.5 px-5 pb-5 pt-6">
+      <aside className="hidden h-full min-h-0 w-[232px] shrink-0 flex-col bg-pine text-white md:flex">
+        <div className="flex shrink-0 items-center gap-2.5 px-5 pb-5 pt-6">
           <Logo />
           <div className="leading-tight">
             <span className="block font-display text-[18px] font-semibold tracking-tight">GridPulse</span>
             <span className="block text-[11.5px] text-white/55">Chitral operations · چترال</span>
           </div>
         </div>
-        <nav className="flex flex-1 flex-col gap-0.5 px-3" aria-label="Primary">
+        <nav className="flex flex-1 min-h-0 flex-col gap-0.5 overflow-y-auto px-3" aria-label="Primary">
           {items.map((item) => (
             <NavLink
               key={item.to}
@@ -91,7 +91,7 @@ export default function AppLayout() {
         </nav>
 
         {/* Fleet pulse in the rail: always visible, whatever page you are on */}
-        <div className="mx-3 mb-3 rounded-control border border-white/10 bg-white/5 px-3 py-2.5">
+        <div className="mx-3 mb-3 shrink-0 rounded-control border border-white/10 bg-white/5 px-3 py-2.5">
           <div className="flex items-center gap-2 text-[11.5px] text-white/60">
             <span className={clsx('h-1.5 w-1.5 rounded-full', stale ? 'bg-ember' : 'bg-amber')} />
             {stale ? 'Simulator idle' : 'Live'}
@@ -101,7 +101,7 @@ export default function AppLayout() {
           <p className="mt-0.5 text-[11.5px] text-white/50">{live.data?.reporting_assets ?? 0} assets reporting</p>
         </div>
 
-        <div className="border-t border-white/10 px-3 py-3">
+        <div className="shrink-0 border-t border-white/10 px-3 py-3">
           <NavLink to="/settings" className={({ isActive }) => clsx('flex items-center gap-3 rounded-control px-3 py-2.5 text-[14px] transition-colors', isActive ? 'bg-white/10 text-white' : 'text-white/70 hover:bg-white/5 hover:text-white')}>
             <Settings className="h-[18px] w-[18px]" strokeWidth={1.75} />
             Settings
@@ -122,8 +122,8 @@ export default function AppLayout() {
         </div>
       </aside>
 
-      {/* Content */}
-      <div className="flex min-w-0 flex-1 flex-col">
+      {/* Content: the only scrolling region */}
+      <div className="flex h-full min-w-0 flex-1 flex-col overflow-y-auto">
         <header className="sticky top-0 z-30 border-b border-line bg-mist/85 backdrop-blur">
           <div className="flex items-center justify-between gap-3 px-4 py-2.5 md:px-8 md:py-3">
             <div className="flex items-center gap-2 md:hidden">

@@ -8,10 +8,16 @@ node_modules
 client/dist
 npm-debug.log*
 
-# Laravel
+# Laravel / Environment
 api/vendor
 api/.env
-api/.env.backup
+api/.env.*
+!api/.env.example
+!api/.env.*.example
+.env
+.env.*
+!.env.example
+!.env.*.example
 api/.phpunit.result.cache
 api/storage/*.key
 api/storage/logs/*

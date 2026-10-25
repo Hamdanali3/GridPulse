@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: gridpulse-api
+    runtime: docker
+    dockerfilePath: Dockerfile
+    plan: free
+    region: singapore
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: APP_NAME
+        value: GridPulse
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: SEED_DEMO
+        value: true
+      - key: CLIENT_ORIGIN
+        value: http://localhost:3000,http://localhost:5173,https://*.vercel.app
+      - key: DB_URL
+        sync: false # Set this to your Supabase PostgreSQL Connection URI
+      - key: APP_KEY
+        generateValue: true

@@ -1,0 +1,13 @@
+project_id = "zvrlxhwgmpqpbvzzadrc"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[functions.api]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/api/index.ts"

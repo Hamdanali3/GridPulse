@@ -9,13 +9,13 @@ const stats = [
 
 export default function Stats() {
   return (
-    <section aria-label="GridPulse in numbers" className="border-y border-line bg-pine py-12 md:py-16">
+    <section id="where-we-operate" aria-label="GridPulse in numbers" className="scroll-mt-16 border-y border-line bg-pine py-12 md:py-16">
       <div className="mx-auto max-w-6xl px-4 md:px-8">
         <Reveal className="grid grid-cols-2 gap-8 lg:grid-cols-4">
           {stats.map((s) => (
             <div key={s.label} className="text-center lg:text-left">
               <p className="font-display text-[34px] font-bold leading-none text-amber tabular sm:text-[40px]">{s.value}</p>
-              <p className="mt-2 text-[13px] leading-snug text-white/70">{s.label}</p>
+              <p className="mt-2 text-[13px] leading-snug text-white/75">{s.label}</p>
             </div>
           ))}
         </Reveal>

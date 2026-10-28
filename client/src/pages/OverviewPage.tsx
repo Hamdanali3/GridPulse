@@ -87,7 +87,7 @@ export default function OverviewPage() {
             <FleetLiveChart data={series.data} height={250} dark />
           ) : (
             <div className="flex h-[250px] items-center justify-center text-white/60">
-              Waiting for readings. Start the simulator: <code className="mx-1 rounded bg-white/10 px-1.5 py-0.5 text-[12.5px]">php artisan schedule:work</code>
+              Waiting for readings. Start the simulator: <code className="mx-1 rounded-chip bg-white/10 px-1.5 py-0.5 text-[12.5px]">php artisan schedule:work</code>
             </div>
           )}
           <p className="mt-1 text-right text-[12px] text-white/40">Last 60 minutes, one-minute buckets, redrawn every 5 s</p>
@@ -152,7 +152,7 @@ export default function OverviewPage() {
                   <span className="w-[120px] text-right">
                     <span className="block text-[13.5px] font-semibold text-pine tabular">{fmtKw(s.current_output_kw)}</span>
                     <span className="flex items-center justify-end gap-1.5 text-[11.5px] text-ink-muted">
-                      <span className="h-1 w-12 overflow-hidden rounded-full bg-moss"><span className="block h-full rounded-full bg-amber" style={{ width: `${Math.min(100, s.capacity_factor_pct)}%` }} /></span>
+                      <span className="h-1 w-12 overflow-hidden rounded-chip bg-moss"><span className="block h-full rounded-chip bg-amber" style={{ width: `${Math.min(100, s.capacity_factor_pct)}%` }} /></span>
                       <span className="w-8 text-right tabular">{fmtPct(s.capacity_factor_pct, 0)}</span>
                     </span>
                   </span>
@@ -170,7 +170,7 @@ function Kpi({ label, value, note, tone, to, accent }: { label: string; value: s
   const bar = { amber: 'bg-amber', teal: 'bg-teal', ember: 'bg-ember', pine: 'bg-pine' }[accent];
   const body = (
     <div className={`panel relative h-full overflow-hidden p-5 ${to ? 'card-link' : ''}`}>
-      <span className={`absolute left-0 top-4 h-8 w-1 rounded-r ${bar}`} aria-hidden />
+      <span className={`absolute left-0 top-4 h-8 w-1 rounded-r-[2px] ${bar}`} aria-hidden />
       <p className="text-[13px] text-ink-muted">{label}</p>
       <p className={`mt-1 font-display text-[30px] font-semibold leading-none tabular ${tone === 'ember' ? 'text-ember' : 'text-pine'}`}>{value}</p>
       {note && <p className="mt-2 text-[12.5px] text-ink-faint">{note}</p>}

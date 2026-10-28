@@ -23,16 +23,16 @@ export default function TechnologyAreaChart({ data, height = 260 }: { data: Type
             </linearGradient>
           ))}
         </defs>
-        <CartesianGrid vertical={false} stroke="rgba(20,49,43,0.08)" />
-        <XAxis dataKey="t" type="number" domain={['dataMin', 'dataMax']} tickFormatter={(v: number) => fmtDate(new Date(v).toISOString(), 'HH:mm')} tick={{ fontSize: 11.5, fill: '#5C6B66' }} axisLine={false} tickLine={false} minTickGap={48} />
-        <YAxis tickFormatter={(v: number) => (v === 0 ? '0' : fmtKw(v, 0))} tick={{ fontSize: 11.5, fill: '#5C6B66' }} axisLine={false} tickLine={false} width={64} />
+        <CartesianGrid vertical={false} stroke="var(--gp-border)" />
+        <XAxis dataKey="t" type="number" domain={['dataMin', 'dataMax']} tickFormatter={(v: number) => fmtDate(new Date(v).toISOString(), 'HH:mm')} tick={{ fontSize: 11.5, fill: 'var(--gp-text-muted)' }} axisLine={false} tickLine={false} minTickGap={48} />
+        <YAxis tickFormatter={(v: number) => (v === 0 ? '0' : fmtKw(v, 0))} tick={{ fontSize: 11.5, fill: 'var(--gp-text-muted)' }} axisLine={false} tickLine={false} width={64} />
         <Tooltip
-          contentStyle={{ borderRadius: 8, border: '1px solid rgba(20,49,43,0.12)', boxShadow: 'none', fontSize: 13 }}
+          contentStyle={{ borderRadius: 'var(--radius-ui)', border: '1px solid var(--gp-border-strong)', boxShadow: 'none', fontSize: 13, background: 'var(--gp-panel)', color: 'var(--gp-text)' }}
           labelFormatter={(v) => fmtDate(new Date(Number(v)).toISOString(), 'd MMM, HH:mm')}
           formatter={(v: number, name: string) => [fmtKw(v, 1), name]}
           itemSorter={(item) => -(item.value as number)}
         />
-        <Legend verticalAlign="top" align="right" iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12.5, paddingBottom: 8 }} />
+        <Legend verticalAlign="top" align="right" iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12.5, paddingBottom: 8, color: 'var(--gp-text-muted)' }} />
         {SERIES.map((s) => (
           <Area key={s.key} type="monotone" dataKey={s.key} name={s.label} stackId="fleet" stroke={s.color} strokeWidth={1.5} fill={`url(#fill-${s.key})`} dot={false} isAnimationActive={false} />
         ))}

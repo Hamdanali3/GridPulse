@@ -104,7 +104,7 @@ export default function WorkOrdersPage() {
                     <button className="text-left text-[13.5px] font-medium leading-snug text-pine hover:underline" onClick={() => can('admin', 'engineer') && setEditing(w)}>{w.title}</button>
                     <p className="mt-1 text-[12px] text-ink-muted">{w.site?.name}{w.asset && ` · ${w.asset.tag}`}</p>
                     <p className="mt-1.5 flex items-center gap-1.5 text-[12px] text-ink-faint">
-                      {w.assignee ? <><span className="flex h-5 w-5 items-center justify-center rounded-full bg-pine text-[10px] font-semibold text-white">{w.assignee.name.split(' ').map((n) => n[0]).slice(0, 2).join('')}</span>{w.assignee.name}</> : 'Unassigned'}
+                      {w.assignee ? <><span className="flex h-5 w-5 items-center justify-center rounded-control bg-pine text-[10px] font-semibold text-white">{w.assignee.name.split(' ').map((n) => n[0]).slice(0, 2).join('')}</span>{w.assignee.name}</> : 'Unassigned'}
                     </p>
                     {can('admin', 'engineer') && (
                       <div className="mt-2 flex flex-wrap gap-1 border-t border-line pt-2">

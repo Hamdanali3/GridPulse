@@ -36,17 +36,17 @@ export default function UserMenu({ user, onLogout }: { user: User | null; onLogo
         aria-expanded={open}
         aria-label="Account menu"
         className={clsx(
-          'inline-flex h-9 w-9 items-center justify-center rounded-full bg-pine font-display text-[13px] font-semibold text-amber ring-offset-2 transition-shadow hover:ring-2 hover:ring-pine/30',
-          open && 'ring-2 ring-pine/30',
+          'inline-flex h-9 w-9 items-center justify-center rounded-control border border-line-strong bg-pine font-display text-[13px] font-semibold text-amber transition-colors hover:bg-pine-soft',
+          open && 'border-amber',
         )}
       >
         {initial}
       </button>
 
       {open && (
-        <div role="menu" className="absolute right-0 top-11 z-40 w-64 overflow-hidden rounded-panel border border-line bg-paper shadow-[0_12px_32px_rgba(20,49,43,0.14)]">
+        <div role="menu" className="absolute right-0 top-11 z-40 w-64 overflow-hidden rounded-panel border border-line-strong bg-paper">
           <div className="flex items-center gap-3 px-4 py-3.5">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-pine font-display text-[15px] font-semibold text-amber">{initial}</span>
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-control bg-pine font-display text-[15px] font-semibold text-amber">{initial}</span>
             <div className="min-w-0">
               <p className="truncate text-[14px] font-medium text-pine">{user?.name}</p>
               <p className="truncate text-[12.5px] text-ink-muted">{user?.email}</p>

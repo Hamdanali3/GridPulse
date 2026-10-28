@@ -9,11 +9,13 @@ const points = [
 
 export default function About() {
   return (
-    <section id="about" className="bg-paper/60 py-16 md:py-24">
+    <section id="about" className="scroll-mt-16 border-y border-line bg-paper/60 py-16 md:py-24">
+      <span id="news" className="block scroll-mt-24" aria-hidden />
+      <span id="press-kit" className="block scroll-mt-24" aria-hidden />
       <div className="mx-auto max-w-6xl px-4 md:px-8">
         <Reveal className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-start lg:gap-16">
-          <div>
-            <p className="chip bg-teal-soft text-teal">Why GridPulse</p>
+          <div id="our-story" className="scroll-mt-24">
+            <p className="chip tone-teal">Why GridPulse</p>
             <h2 className="mt-3 font-display text-[28px] font-semibold leading-tight text-pine sm:text-[32px]">
               Built for a mixed fleet, in a district where a truck roll can take half a day.
             </h2>

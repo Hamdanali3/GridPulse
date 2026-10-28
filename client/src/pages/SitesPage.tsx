@@ -113,7 +113,7 @@ export default function SitesPage() {
                   </div>
                   <Sparkline values={sparks.data?.[String(s.id)] ?? []} width={120} height={36} color={s.type === 'solar' ? '#F2A93B' : '#2E8B8B'} />
                 </div>
-                <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-moss"><div className="h-full rounded-full bg-amber" style={{ width: `${Math.min(100, cf)}%` }} /></div>
+                <div className="mt-3 h-1.5 w-full overflow-hidden rounded-chip bg-moss"><div className="h-full rounded-chip bg-amber" style={{ width: `${Math.min(100, cf)}%` }} /></div>
                 <div className="mt-4 flex items-center justify-between border-t border-line pt-3 text-[12.5px] text-ink-muted">
                   <span>{s.asset_count} {s.asset_count === 1 ? 'unit' : 'units'}</span>
                   <span>{s.open_alerts ? <span className="font-semibold text-ember">{s.open_alerts} open {s.open_alerts === 1 ? 'alert' : 'alerts'}</span> : <span className="text-ink-faint">No open alerts</span>}</span>

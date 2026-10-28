@@ -52,11 +52,11 @@ export default function ReportsPage() {
           <>
             <ResponsiveContainer width="100%" height={Math.max(220, 36 * energy.data.length + 40)}>
               <BarChart data={energy.data} layout="vertical" margin={{ left: 8, right: 32 }}>
-                <CartesianGrid horizontal={false} stroke="rgba(20,49,43,0.08)" />
-                <XAxis type="number" tickFormatter={(v: number) => fmtKwh(v, 0)} tick={{ fontSize: 11.5, fill: '#5C6B66' }} axisLine={false} tickLine={false} />
-                <YAxis type="category" dataKey="label" width={groupBy === 'site' ? 180 : 90} tickFormatter={(v: string) => (groupBy === 'type' ? humanize(v) : v)} tick={{ fontSize: 12.5, fill: '#182320' }} axisLine={false} tickLine={false} />
-                <Tooltip cursor={{ fill: 'rgba(220,232,217,.4)' }} contentStyle={{ borderRadius: 8, border: '1px solid rgba(20,49,43,0.12)', boxShadow: 'none', fontSize: 13 }} formatter={(v: number) => [fmtKwh(v, 1), 'Energy']} />
-                <Bar dataKey="kwh" radius={[0, 6, 6, 0]} barSize={18} isAnimationActive={false}>
+                <CartesianGrid horizontal={false} stroke="var(--gp-border)" />
+                <XAxis type="number" tickFormatter={(v: number) => fmtKwh(v, 0)} tick={{ fontSize: 11.5, fill: 'var(--gp-text-muted)' }} axisLine={false} tickLine={false} />
+                <YAxis type="category" dataKey="label" width={groupBy === 'site' ? 180 : 90} tickFormatter={(v: string) => (groupBy === 'type' ? humanize(v) : v)} tick={{ fontSize: 12.5, fill: 'var(--gp-text)' }} axisLine={false} tickLine={false} />
+                <Tooltip cursor={{ fill: 'var(--gp-table-hover)' }} contentStyle={{ borderRadius: 'var(--radius-ui)', border: '1px solid var(--gp-border-strong)', boxShadow: 'none', fontSize: 13, background: 'var(--gp-panel)', color: 'var(--gp-text)' }} formatter={(v: number) => [fmtKwh(v, 1), 'Energy']} />
+                <Bar dataKey="kwh" radius={[0, 3, 3, 0]} barSize={18} isAnimationActive={false}>
                   {energy.data.map((r) => <Cell key={r.key} fill={r.type === 'solar' || r.key === 'solar' ? '#F2A93B' : groupBy === 'day' ? '#F2A93B' : '#2E8B8B'} />)}
                 </Bar>
               </BarChart>

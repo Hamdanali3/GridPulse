@@ -5,6 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="description" content="GridPulse — live operations platform for Chitral district's hydro and solar plants." />
     <meta name="theme-color" content="#14312B" />
+    <script>
+      (function () {
+        var t = null;
+        try {
+          var s = window.localStorage.getItem('gridpulse_theme');
+          if (s === 'light' || s === 'dark') t = s;
+        } catch (e) {}
+        if (!t) {
+          t = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        document.documentElement.dataset.theme = t;
+      })();
+    </script>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

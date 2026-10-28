@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -28,6 +28,12 @@ export default function LoginPage() {
   const [serverError, setServerError] = useState<string | null>(null);
   const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } = useForm<Form>({ resolver: zodResolver(schema) });
 
+  useEffect(() => {
+    if (location.hash === '#demo-accounts') {
+      document.getElementById('demo-accounts')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [location.hash]);
+
   const onSubmit = async (values: Form) => {
     setServerError(null);
     try {
@@ -54,7 +60,7 @@ export default function LoginPage() {
         </button>
       </form>
 
-      <div className="mt-8 rounded-panel border border-line bg-paper p-4">
+      <div id="demo-accounts" className="mt-8 scroll-mt-8 rounded-panel border border-line bg-paper p-4">
         <p className="text-[13px] font-medium text-pine">Demo accounts</p>
         <p className="mb-3 text-[12.5px] text-ink-muted">Click one to fill the form. Each role sees a different set of controls.</p>
         <div className="flex flex-wrap gap-2">

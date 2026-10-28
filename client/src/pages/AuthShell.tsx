@@ -1,7 +1,9 @@
 import type { ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import { Logo } from '../layouts/AppLayout';
 import Ridge from '../components/Ridge';
 import { useZonedClock } from '../lib/hooks';
+import { ThemeToggle } from '../lib/theme';
 
 /**
  * Split auth layout. The left panel carries the product promise over a layered Hindu Kush ridge with
@@ -12,33 +14,36 @@ export default function AuthShell({ title, subtitle, children, footer }: { title
   const clock = useZonedClock('Asia/Karachi');
   return (
     <div className="grid min-h-full lg:grid-cols-[1.1fr_1fr]">
-      <aside className="relative hidden overflow-hidden bg-pine px-12 py-10 text-white lg:flex lg:flex-col">
-        <div className="relative z-10 flex items-center gap-2.5">
+      <aside className="relative hidden overflow-hidden border-r border-line bg-pine px-12 py-10 text-white lg:flex lg:flex-col">
+        <Link to="/" className="relative z-10 inline-flex items-center gap-2.5 self-start">
           <Logo size={32} />
           <span className="font-display text-[20px] font-semibold tracking-tight">GridPulse</span>
-        </div>
+        </Link>
         <div className="relative z-10 mt-auto pb-24">
           <h2 className="max-w-[16ch] font-display text-[46px] font-semibold leading-[1.04] tracking-tight">
             Every megawatt from the Hindu Kush, on one screen.
           </h2>
-          <p className="mt-5 max-w-[42ch] text-[15.5px] leading-relaxed text-white/70">
+          <p className="mt-5 max-w-[42ch] text-[15.5px] leading-relaxed text-white/75">
             Live generation from Chitral's hydro plants and solar fields. Alerts the moment a unit drifts. Work
             orders that close the loop.
           </p>
-          <ul className="mt-8 flex flex-wrap gap-x-10 gap-y-4 text-[13px] text-white/60">
+          <ul className="mt-8 flex flex-wrap gap-x-10 gap-y-4 text-[13px] text-white/70">
             <li><span className="whitespace-nowrap font-display text-[22px] font-semibold text-amber tabular">190 MW</span><br />across Chitral district</li>
             <li><span className="font-display text-[22px] font-semibold text-white tabular">11</span><br />plants, Upper and Lower Chitral</li>
             <li><span className="font-display text-[22px] font-semibold text-white tabular">5 s</span><br />telemetry cadence</li>
           </ul>
         </div>
         <Ridge className="pointer-events-none absolute inset-x-0 bottom-0 h-[300px] w-full" hour={clock.hour} snow={false} />
-        <p className="absolute bottom-4 right-6 z-10 text-[11.5px] text-white/40">Chitral · {clock.time}</p>
+        <p className="absolute bottom-4 right-6 z-10 text-[11.5px] text-white/55">Chitral · {clock.time}</p>
       </aside>
 
       <main className="flex flex-col px-6 py-8">
-        <div className="flex items-center gap-2.5 lg:hidden">
-          <Logo size={30} />
-          <span className="font-display text-[19px] font-semibold text-pine">GridPulse</span>
+        <div className="flex items-center justify-between gap-3">
+          <Link to="/" className="inline-flex items-center gap-2.5 lg:hidden">
+            <Logo size={30} />
+            <span className="font-display text-[19px] font-semibold text-pine">GridPulse</span>
+          </Link>
+          <ThemeToggle className="ml-auto" />
         </div>
         <div className="my-auto w-full max-w-[400px] self-center py-10">
           <h1 className="text-[28px] font-semibold text-pine">{title}</h1>
@@ -46,12 +51,13 @@ export default function AuthShell({ title, subtitle, children, footer }: { title
           <div className="mt-8">{children}</div>
           <p className="mt-8 text-[13.5px] text-ink-muted">{footer}</p>
         </div>
-        <footer className="flex w-full max-w-[400px] flex-wrap items-center justify-between gap-x-4 gap-y-1 self-center text-[12px] text-ink-faint">
-          <span>© 2026 GridPulse · Chitral, Khyber Pakhtunkhwa</span>
-          <span>
-            Demo data only ·{' '}
-            <a href="https://github.com/Hamdanali3/GridPulse" target="_blank" rel="noreferrer" className="transition-colors hover:text-pine">GitHub</a>
-          </span>
+        <footer className="flex w-full max-w-[400px] flex-wrap items-center justify-between gap-x-4 gap-y-1 self-center border-t border-line pt-4 text-[12px] text-ink-muted">
+          <span>© 2026 GridPulse</span>
+          <nav aria-label="Footer" className="flex items-center gap-4">
+            <Link to="/" className="transition-colors hover:text-pine">Home</Link>
+            <Link to="/login" className="transition-colors hover:text-pine">Log in</Link>
+            <Link to="/register" className="transition-colors hover:text-pine">Sign up</Link>
+          </nav>
         </footer>
       </main>
     </div>

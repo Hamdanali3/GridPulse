@@ -41,10 +41,11 @@ export default function Contact() {
   };
 
   return (
-    <section id="contact" className="py-16 md:py-24">
+    <section id="contact" className="scroll-mt-16 py-16 md:py-24">
+      <span id="visit-chitral" className="block scroll-mt-24" aria-hidden />
       <div className="mx-auto max-w-6xl px-4 md:px-8">
         <Reveal className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16">
-          <div>
+          <div id="support" className="scroll-mt-24">
             <p className="chip bg-moss text-pine">Get in touch</p>
             <h2 className="mt-3 font-display text-[28px] font-semibold leading-tight text-pine sm:text-[32px]">
               Questions about the fleet, or the code behind it?
@@ -63,7 +64,7 @@ export default function Contact() {
             </div>
           </div>
 
-          <form onSubmit={handleSubmit} noValidate className="panel space-y-4 p-6">
+          <form id="book-a-demo" onSubmit={handleSubmit} noValidate className="panel scroll-mt-24 space-y-4 p-6">
             <div>
               <label htmlFor="contact-name" className="mb-1.5 block text-[13px] font-medium text-pine">Name</label>
               <input

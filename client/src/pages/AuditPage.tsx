@@ -16,7 +16,7 @@ export default function AuditPage() {
           <div className="overflow-x-auto"><table className="table">
             <thead><tr><th>When</th><th>Who</th><th>Action</th><th>Entity</th><th>Details</th><th>IP</th></tr></thead>
             <tbody>{log.data!.data.map((e) => (
-              <tr key={e.id}><td className="tabular text-ink-muted">{fmtDateTime(e.created_at)}</td><td className="font-medium text-pine">{e.actor?.name ?? 'System'}</td><td><code className="rounded bg-mist px-1.5 py-0.5 text-[12.5px]">{e.action}</code></td><td className="text-ink-muted">{e.entity_type}{e.entity_id ? ` #${e.entity_id}` : ''}</td><td className="max-w-[320px] truncate text-[12.5px] text-ink-muted">{e.meta ? JSON.stringify(e.meta) : '—'}</td><td className="tabular text-ink-faint">{e.ip ?? '—'}</td></tr>
+              <tr key={e.id}><td className="tabular text-ink-muted">{fmtDateTime(e.created_at)}</td><td className="font-medium text-pine">{e.actor?.name ?? 'System'}</td><td><code className="rounded-chip bg-mist px-1.5 py-0.5 text-[12.5px]">{e.action}</code></td><td className="text-ink-muted">{e.entity_type}{e.entity_id ? ` #${e.entity_id}` : ''}</td><td className="max-w-[320px] truncate text-[12.5px] text-ink-muted">{e.meta ? JSON.stringify(e.meta) : '—'}</td><td className="tabular text-ink-faint">{e.ip ?? '—'}</td></tr>
             ))}</tbody>
           </table></div>
         )}

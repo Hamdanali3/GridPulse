@@ -8,9 +8,9 @@ import { humanize } from '../../lib/format';
 
 const statusStyles: Record<OperationalStatus, string> = {
   online: 'bg-moss text-pine',
-  degraded: 'bg-[#fdf0d5] text-[#8a5a00]',
-  offline: 'bg-ember-soft text-[#9c2f1c]',
-  maintenance: 'bg-teal-soft text-[#1d5c5c]',
+  degraded: 'tone-warn',
+  offline: 'tone-ember',
+  maintenance: 'tone-teal',
 };
 
 export function StatusChip({ status }: { status: OperationalStatus }) {
@@ -29,9 +29,9 @@ export function StatusChip({ status }: { status: OperationalStatus }) {
 }
 
 const severityStyles: Record<Severity, string> = {
-  critical: 'bg-ember-soft text-[#9c2f1c]',
-  warning: 'bg-[#fdf0d5] text-[#8a5a00]',
-  info: 'bg-teal-soft text-[#1d5c5c]',
+  critical: 'tone-ember',
+  warning: 'tone-warn',
+  info: 'tone-teal',
 };
 
 export function SeverityChip({ severity }: { severity: Severity }) {
@@ -39,8 +39,8 @@ export function SeverityChip({ severity }: { severity: Severity }) {
 }
 
 const alertStatusStyles: Record<AlertStatus, string> = {
-  open: 'bg-ember-soft text-[#9c2f1c]',
-  acknowledged: 'bg-[#fdf0d5] text-[#8a5a00]',
+  open: 'tone-ember',
+  acknowledged: 'tone-warn',
   resolved: 'bg-moss text-pine',
 };
 
@@ -50,9 +50,9 @@ export function AlertStatusChip({ status }: { status: AlertStatus }) {
 
 const priorityStyles: Record<Priority, string> = {
   low: 'bg-mist text-ink-muted border border-line',
-  medium: 'bg-teal-soft text-[#1d5c5c]',
-  high: 'bg-[#fdf0d5] text-[#8a5a00]',
-  urgent: 'bg-ember-soft text-[#9c2f1c]',
+  medium: 'tone-teal',
+  high: 'tone-warn',
+  urgent: 'tone-ember',
 };
 
 export function PriorityChip({ priority }: { priority: Priority }) {
@@ -61,8 +61,8 @@ export function PriorityChip({ priority }: { priority: Priority }) {
 
 const woStyles: Record<WorkOrderStatus, string> = {
   planned: 'bg-mist text-ink-muted border border-line',
-  in_progress: 'bg-teal-soft text-[#1d5c5c]',
-  blocked: 'bg-ember-soft text-[#9c2f1c]',
+  in_progress: 'tone-teal',
+  blocked: 'tone-ember',
   done: 'bg-moss text-pine',
 };
 
@@ -156,7 +156,7 @@ export function Spinner({ label = 'Loading' }: { label?: string }) {
 
 export function ErrorNote({ message }: { message: string }) {
   return (
-    <div className="rounded-control border border-ember/40 bg-ember-soft px-4 py-3 text-[#9c2f1c]" role="alert">
+    <div className="tone-ember rounded-control border border-ember/40 px-4 py-3" role="alert">
       {message}
     </div>
   );
@@ -176,7 +176,7 @@ export function Field({ label, error, hint, children, htmlFor }: { label: string
 
 /* ---------- Drawer ---------- */
 
-export function Drawer({ open, onClose, title, children, footer, width = 'max-w-lg' }: { open: boolean; onClose: () => void; title: string; children: ReactNode; footer?: ReactNode; width?: string }) {
+export function Drawer({ open, onClose, title, children, footer, width = 'max-w-lg' }: { open: boolean; onClose: () => void; title: string; children: ReactNode; width?: string; footer?: ReactNode }) {
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -191,8 +191,8 @@ export function Drawer({ open, onClose, title, children, footer, width = 'max-w-
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true" aria-label={title}>
-      <button className="absolute inset-0 bg-pine/40" aria-label="Close" onClick={onClose} />
-      <div className={clsx('relative flex h-full w-full flex-col bg-paper', width)}>
+      <button className="modal-backdrop absolute inset-0" aria-label="Close" onClick={onClose} />
+      <div className={clsx('relative flex h-full w-full flex-col border-l border-line-strong bg-paper', width)}>
         <header className="flex items-center justify-between border-b border-line px-6 py-4">
           <h2 className="text-lg font-semibold text-pine">{title}</h2>
           <button className="btn btn-ghost btn-sm" onClick={onClose} aria-label="Close">
@@ -216,8 +216,8 @@ export function ConfirmDialog({ open, title, message, confirmLabel = 'Delete', o
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="alertdialog" aria-modal="true" aria-label={title}>
-      <button className="absolute inset-0 bg-pine/40" aria-label="Cancel" onClick={onCancel} />
-      <div className="panel relative w-full max-w-md p-6">
+      <button className="modal-backdrop absolute inset-0" aria-label="Cancel" onClick={onCancel} />
+      <div className="panel relative w-full max-w-md border-line-strong p-6">
         <h2 className="text-lg font-semibold text-pine">{title}</h2>
         <p className="mt-2 text-ink-muted">{message}</p>
         <div className="mt-6 flex justify-end gap-2">
@@ -256,8 +256,8 @@ export function Segmented<T extends string>({ value, options, onChange, ariaLabe
           aria-selected={o.value === value}
           onClick={() => onChange(o.value)}
           className={clsx(
-            'rounded-[6px] px-3 py-1.5 text-[13px] font-medium transition-colors',
-            o.value === value ? 'bg-pine text-white' : 'text-ink-muted hover:bg-moss hover:text-pine',
+            'rounded-control px-3 py-1.5 text-[13px] font-medium transition-colors',
+            o.value === value ? 'seg-active' : 'text-ink-muted hover:bg-moss hover:text-pine',
           )}
         >
           {o.label}
@@ -272,8 +272,8 @@ export function HealthBar({ value }: { value: number }) {
   const tone = value >= 85 ? 'bg-[#2f8f5b]' : value >= 65 ? 'bg-amber' : 'bg-ember';
   return (
     <div className="flex items-center gap-2" aria-label={`Health ${value}%`}>
-      <div className="h-1.5 w-20 overflow-hidden rounded-full bg-moss">
-        <div className={clsx('h-full rounded-full', tone)} style={{ width: `${Math.max(2, Math.min(100, value))}%` }} />
+      <div className="h-1.5 w-20 overflow-hidden rounded-chip bg-moss">
+        <div className={clsx('h-full rounded-chip', tone)} style={{ width: `${Math.max(2, Math.min(100, value))}%` }} />
       </div>
       <span className="tabular text-[12.5px] text-ink-muted">{Math.round(value)}</span>
     </div>

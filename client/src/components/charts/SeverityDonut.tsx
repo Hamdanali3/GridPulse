@@ -13,7 +13,10 @@ export default function SeverityDonut({ bySeverity, size = 88 }: { bySeverity: R
           <Pie data={data} dataKey="value" innerRadius={size * 0.33} outerRadius={size * 0.48} paddingAngle={3} stroke="none" isAnimationActive={false}>
             {data.map((d) => <Cell key={d.name} fill={COLORS[d.name]} />)}
           </Pie>
-          <Tooltip contentStyle={{ borderRadius: 8, border: '1px solid rgba(20,49,43,0.12)', boxShadow: 'none', fontSize: 12.5 }} formatter={(v: number, n: string) => [v, n]} />
+          <Tooltip
+            contentStyle={{ borderRadius: 'var(--radius-ui)', border: '1px solid var(--gp-border-strong)', boxShadow: 'none', fontSize: 12.5, background: 'var(--gp-panel)', color: 'var(--gp-text)' }}
+            formatter={(v: number, n: string) => [v, n]}
+          />
         </PieChart>
       </ResponsiveContainer>
       <span className="pointer-events-none absolute inset-0 flex items-center justify-center font-display text-[18px] font-bold text-pine tabular">{total}</span>

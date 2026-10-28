@@ -81,16 +81,16 @@ export default function FleetMap({ sites, height = 320, zoom, center, defaultLay
       </MapContainer>
 
       {/* Layer switcher */}
-      <div className="absolute right-3 top-3 z-[500] inline-flex rounded-control border border-line bg-paper/95 p-0.5 backdrop-blur" role="tablist" aria-label="Map style">
+      <div className="absolute right-3 top-3 z-[500] inline-flex rounded-control border border-line-strong bg-paper/95 p-0.5" role="tablist" aria-label="Map style">
         {(Object.keys(LAYERS) as Layer[]).map((k) => (
-          <button key={k} role="tab" aria-selected={layer === k} onClick={() => setLayer(k)} className={clsx('rounded-[6px] px-2.5 py-1 text-[12px] font-medium transition-colors', layer === k ? 'bg-pine text-white' : 'text-ink-muted hover:bg-moss hover:text-pine')}>
+          <button key={k} role="tab" aria-selected={layer === k} onClick={() => setLayer(k)} className={clsx('rounded-control px-2.5 py-1 text-[12px] font-medium transition-colors', layer === k ? 'seg-active' : 'text-ink-muted hover:bg-moss hover:text-pine')}>
             {LAYERS[k].label}
           </button>
         ))}
       </div>
 
       {!single && (
-        <div className="absolute bottom-3 left-3 z-[500] flex flex-wrap gap-3 rounded-control border border-line bg-paper/95 px-3 py-1.5 text-[11.5px] text-ink-muted backdrop-blur">
+        <div className="absolute bottom-3 left-3 z-[500] flex flex-wrap gap-3 rounded-control border border-line-strong bg-paper/95 px-3 py-1.5 text-[11.5px] text-ink-muted">
           {(Object.keys(statusColor) as DashboardSite['status'][]).map((k) => (
             <span key={k} className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full" style={{ background: statusColor[k] }} />{k}</span>
           ))}

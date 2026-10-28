@@ -70,7 +70,7 @@ export default function AlertsPage() {
               <li key={a.id} className="relative grid gap-3 py-4 pl-6 pr-5 md:grid-cols-[auto_1fr_auto] md:items-center">
                 <span className={`absolute inset-y-0 left-0 w-1 ${stripColor[a.severity]}`} aria-hidden />
                 <div className="flex items-center gap-2">
-                  <span className={`flex h-8 w-8 items-center justify-center rounded-control ${a.severity === 'critical' ? 'bg-ember-soft text-ember' : a.severity === 'warning' ? 'bg-[#fdf0d5] text-[#8a5a00]' : 'bg-teal-soft text-teal'}`}>{(() => { const I = typeIcon[a.type] ?? Flame; return <I className="h-4 w-4" />; })()}</span>
+                  <span className={`flex h-8 w-8 items-center justify-center rounded-control ${a.severity === 'critical' ? 'tone-ember' : a.severity === 'warning' ? 'tone-warn' : 'tone-teal'}`}>{(() => { const I = typeIcon[a.type] ?? Flame; return <I className="h-4 w-4" />; })()}</span>
                   <SeverityChip severity={a.severity} /><AlertStatusChip status={a.status} />
                 </div>
                 <div className="min-w-0">

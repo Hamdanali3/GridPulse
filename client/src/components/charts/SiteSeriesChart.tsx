@@ -13,12 +13,12 @@ export default function SiteSeriesChart({ data, height = 240, showEfficiency = t
             <stop offset="100%" stopColor="#F2A93B" stopOpacity={0.02} />
           </linearGradient>
         </defs>
-        <CartesianGrid vertical={false} stroke="rgba(20,49,43,0.08)" />
-        <XAxis dataKey="t" type="number" domain={['dataMin', 'dataMax']} tickFormatter={(v: number) => fmtDate(new Date(v).toISOString(), 'HH:mm')} tick={{ fontSize: 11.5, fill: '#5C6B66' }} axisLine={false} tickLine={false} minTickGap={40} />
-        <YAxis yAxisId="kw" tickFormatter={(v: number) => (v === 0 ? '0' : fmtKw(v, 0))} tick={{ fontSize: 11.5, fill: '#5C6B66' }} axisLine={false} tickLine={false} width={64} />
-        {showEfficiency && <YAxis yAxisId="pct" orientation="right" domain={[0, 100]} tickFormatter={(v: number) => `${v}%`} tick={{ fontSize: 11.5, fill: '#5C6B66' }} axisLine={false} tickLine={false} width={44} />}
+        <CartesianGrid vertical={false} stroke="var(--gp-border)" />
+        <XAxis dataKey="t" type="number" domain={['dataMin', 'dataMax']} tickFormatter={(v: number) => fmtDate(new Date(v).toISOString(), 'HH:mm')} tick={{ fontSize: 11.5, fill: 'var(--gp-text-muted)' }} axisLine={false} tickLine={false} minTickGap={40} />
+        <YAxis yAxisId="kw" tickFormatter={(v: number) => (v === 0 ? '0' : fmtKw(v, 0))} tick={{ fontSize: 11.5, fill: 'var(--gp-text-muted)' }} axisLine={false} tickLine={false} width={64} />
+        {showEfficiency && <YAxis yAxisId="pct" orientation="right" domain={[0, 100]} tickFormatter={(v: number) => `${v}%`} tick={{ fontSize: 11.5, fill: 'var(--gp-text-muted)' }} axisLine={false} tickLine={false} width={44} />}
         <Tooltip
-          contentStyle={{ borderRadius: 8, border: '1px solid rgba(20,49,43,0.12)', boxShadow: 'none', fontSize: 13 }}
+          contentStyle={{ borderRadius: 'var(--radius-ui)', border: '1px solid var(--gp-border-strong)', boxShadow: 'none', fontSize: 13, background: 'var(--gp-panel)', color: 'var(--gp-text)' }}
           labelFormatter={(v) => fmtDate(new Date(Number(v)).toISOString(), 'd MMM, HH:mm')}
           formatter={(v: number, name: string) => (name === 'kw' ? [fmtKw(v, 2), 'Output'] : name === 'efficiency_pct' ? [`${v.toFixed(1)}%`, 'Efficiency'] : [`${v.toFixed(1)} °C`, 'Temperature'])}
         />

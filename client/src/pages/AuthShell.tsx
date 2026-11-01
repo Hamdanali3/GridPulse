@@ -1,57 +1,69 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Logo } from '../layouts/AppLayout';
-import Ridge from '../components/Ridge';
 import { useZonedClock } from '../lib/hooks';
 import { ThemeToggle } from '../lib/theme';
 
 /**
- * Split auth layout. The left panel carries the product promise over a layered Hindu Kush ridge with
- * the sun positioned by Chitral local time. If site photography is supplied it goes behind the ridge
- * (see docs/IMAGES.md).
+ * Minimalist split auth layout — clean architectural surfaces, 1px hairline dividers, zero decorative SVGs.
  */
 export default function AuthShell({ title, subtitle, children, footer }: { title: string; subtitle: string; children: ReactNode; footer: ReactNode }) {
   const clock = useZonedClock('Asia/Karachi');
   return (
-    <div className="grid min-h-full lg:grid-cols-[1.1fr_1fr]">
-      <aside className="relative hidden overflow-hidden border-r border-line bg-pine px-12 py-10 text-white lg:flex lg:flex-col">
-        <Link to="/" className="relative z-10 inline-flex items-center gap-2.5 self-start">
-          <Logo size={32} />
-          <span className="font-display text-[20px] font-semibold tracking-tight">GridPulse</span>
-        </Link>
-        <div className="relative z-10 mt-auto pb-24">
-          <h2 className="max-w-[16ch] font-display text-[46px] font-semibold leading-[1.04] tracking-tight">
+    <div className="grid min-h-full lg:grid-cols-2">
+      <aside className="hidden flex-col justify-between border-r border-line bg-paper px-12 py-10 lg:flex">
+        <div className="flex items-center justify-between">
+          <Link to="/" className="inline-flex items-center gap-2.5">
+            <Logo size={26} />
+            <span className="text-[16px] font-semibold tracking-tight text-pine">GridPulse</span>
+          </Link>
+          <span className="tabular text-[12px] text-ink-faint">Chitral · {clock.time}</span>
+        </div>
+
+        <div className="my-auto py-12">
+          <p className="eyebrow">Control room</p>
+          <h2 className="mt-3 max-w-[17ch] text-[38px] font-semibold leading-[1.08] tracking-[-0.03em] text-pine">
             Every megawatt from the Hindu Kush, on one screen.
           </h2>
-          <p className="mt-5 max-w-[42ch] text-[15.5px] leading-relaxed text-white/75">
+          <p className="mt-5 max-w-[42ch] text-[14.5px] leading-relaxed text-ink-muted">
             Live generation from Chitral's hydro plants and solar fields. Alerts the moment a unit drifts. Work
             orders that close the loop.
           </p>
-          <ul className="mt-8 flex flex-wrap gap-x-10 gap-y-4 text-[13px] text-white/70">
-            <li><span className="whitespace-nowrap font-display text-[22px] font-semibold text-amber tabular">190 MW</span><br />across Chitral district</li>
-            <li><span className="font-display text-[22px] font-semibold text-white tabular">11</span><br />plants, Upper and Lower Chitral</li>
-            <li><span className="font-display text-[22px] font-semibold text-white tabular">5 s</span><br />telemetry cadence</li>
-          </ul>
         </div>
-        <Ridge className="pointer-events-none absolute inset-x-0 bottom-0 h-[300px] w-full" hour={clock.hour} snow={false} />
-        <p className="absolute bottom-4 right-6 z-10 text-[11.5px] text-white/55">Chitral · {clock.time}</p>
+
+        <ul className="grid grid-cols-3 gap-6 border-t border-line pt-6 text-[12.5px] text-ink-muted">
+          <li>
+            <span className="block text-[20px] font-semibold text-pine tabular">190 MW</span>
+            <span className="mt-0.5 block">across Chitral district</span>
+          </li>
+          <li>
+            <span className="block text-[20px] font-semibold text-pine tabular">11</span>
+            <span className="mt-0.5 block">plants, Upper & Lower Chitral</span>
+          </li>
+          <li>
+            <span className="block text-[20px] font-semibold text-pine tabular">5 s</span>
+            <span className="mt-0.5 block">telemetry cadence</span>
+          </li>
+        </ul>
       </aside>
 
-      <main className="flex flex-col px-6 py-8">
+      <main className="flex flex-col bg-mist px-6 py-8 sm:px-10">
         <div className="flex items-center justify-between gap-3">
           <Link to="/" className="inline-flex items-center gap-2.5 lg:hidden">
-            <Logo size={30} />
-            <span className="font-display text-[19px] font-semibold text-pine">GridPulse</span>
+            <Logo size={24} />
+            <span className="text-[16px] font-semibold text-pine">GridPulse</span>
           </Link>
           <ThemeToggle className="ml-auto" />
         </div>
-        <div className="my-auto w-full max-w-[400px] self-center py-10">
-          <h1 className="text-[28px] font-semibold text-pine">{title}</h1>
-          <p className="mt-1.5 text-ink-muted">{subtitle}</p>
-          <div className="mt-8">{children}</div>
-          <p className="mt-8 text-[13.5px] text-ink-muted">{footer}</p>
+
+        <div className="my-auto w-full max-w-[380px] self-center py-10">
+          <h1 className="text-[24px] font-semibold tracking-[-0.022em] text-pine">{title}</h1>
+          <p className="mt-1.5 text-[13.5px] text-ink-muted">{subtitle}</p>
+          <div className="mt-7">{children}</div>
+          <p className="mt-7 text-[13px] text-ink-muted">{footer}</p>
         </div>
-        <footer className="flex w-full max-w-[400px] flex-wrap items-center justify-between gap-x-4 gap-y-1 self-center border-t border-line pt-4 text-[12px] text-ink-muted">
+
+        <footer className="flex w-full max-w-[380px] flex-wrap items-center justify-between gap-x-4 gap-y-1 self-center border-t border-line pt-4 text-[12px] text-ink-faint">
           <span>© 2026 GridPulse</span>
           <nav aria-label="Footer" className="flex items-center gap-4">
             <Link to="/" className="transition-colors hover:text-pine">Home</Link>

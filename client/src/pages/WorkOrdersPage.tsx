@@ -65,7 +65,6 @@ export default function WorkOrdersPage() {
     setDragId(null); setOverCol(null);
     if (item && item.status !== status) move.mutate({ id: item.id, status });
   };
-  const accent: Record<string, string> = { urgent: 'border-l-ember', high: 'border-l-amber', medium: 'border-l-teal', low: 'border-l-moss-deep' };
 
   const grouped = useMemo(() => { const g: Record<WorkOrderStatus, WorkOrder[]> = { planned: [], in_progress: [], blocked: [], done: [] }; for (const w of list.data?.data ?? []) g[w.status].push(w); return g; }, [list.data]);
 
@@ -84,30 +83,33 @@ export default function WorkOrdersPage() {
           {COLUMNS.map((col) => (
             <section
               key={col}
-              className={clsx('flex min-h-[240px] flex-col rounded-panel border border-line bg-moss/40 transition-colors', overCol === col && 'drop-target')}
+              className={clsx('flex min-h-[240px] flex-col rounded-panel border border-line bg-mist transition-colors', overCol === col && 'drop-target')}
               onDragOver={(e) => { if (can('admin', 'engineer')) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; if (overCol !== col) setOverCol(col); } }}
               onDragLeave={() => setOverCol((c) => (c === col ? null : c))}
               onDrop={(e) => onDrop(e, col)}
             >
-              <header className="flex items-center justify-between px-4 py-3"><h2 className="text-[13.5px] font-semibold text-pine">{humanize(col)}</h2><span className="tabular text-[12.5px] text-ink-muted">{grouped[col].length}</span></header>
-              <div className="flex flex-1 flex-col gap-2 px-2 pb-2">
+              <header className="flex items-center justify-between border-b border-line px-4 py-2.5">
+                <h2 className="text-[12px] font-medium uppercase tracking-[0.06em] text-ink-muted">{humanize(col)}</h2>
+                <span className="tabular text-[12px] text-ink-faint">{grouped[col].length}</span>
+              </header>
+              <div className="flex flex-1 flex-col gap-2 p-2.5">
                 {grouped[col].length === 0 && <p className="px-2 py-6 text-center text-[12.5px] text-ink-faint">Nothing {col === 'done' ? 'finished yet' : humanize(col).toLowerCase()}</p>}
                 {grouped[col].map((w) => (
                   <article
                     key={w.id}
-                    className={clsx('panel border-l-[3px] p-3', accent[w.priority], dragId === w.id && 'dragging', can('admin', 'engineer') && 'cursor-grab active:cursor-grabbing')}
+                    className={clsx('panel p-3.5', dragId === w.id && 'dragging', can('admin', 'engineer') && 'cursor-grab active:cursor-grabbing')}
                     draggable={can('admin', 'engineer')}
                     onDragStart={(e) => onDragStart(e, w)}
                     onDragEnd={() => { setDragId(null); setOverCol(null); }}
                   >
-                    <div className="mb-1.5 flex items-start justify-between gap-2"><PriorityChip priority={w.priority} />{w.due_at && <span className={clsx('text-[12px] tabular', new Date(w.due_at) < new Date() && w.status !== 'done' ? 'font-medium text-ember' : 'text-ink-faint')}>{fmtDate(w.due_at, 'd MMM')}</span>}</div>
+                    <div className="mb-2 flex items-start justify-between gap-2"><PriorityChip priority={w.priority} />{w.due_at && <span className={clsx('text-[12px] tabular', new Date(w.due_at) < new Date() && w.status !== 'done' ? 'font-medium text-ember' : 'text-ink-faint')}>{fmtDate(w.due_at, 'd MMM')}</span>}</div>
                     <button className="text-left text-[13.5px] font-medium leading-snug text-pine hover:underline" onClick={() => can('admin', 'engineer') && setEditing(w)}>{w.title}</button>
                     <p className="mt-1 text-[12px] text-ink-muted">{w.site?.name}{w.asset && ` · ${w.asset.tag}`}</p>
-                    <p className="mt-1.5 flex items-center gap-1.5 text-[12px] text-ink-faint">
-                      {w.assignee ? <><span className="flex h-5 w-5 items-center justify-center rounded-control bg-pine text-[10px] font-semibold text-white">{w.assignee.name.split(' ').map((n) => n[0]).slice(0, 2).join('')}</span>{w.assignee.name}</> : 'Unassigned'}
+                    <p className="mt-2 flex items-center gap-1.5 text-[12px] text-ink-faint">
+                      {w.assignee ? <><span className="flex h-5 w-5 items-center justify-center rounded-control border border-line-strong bg-moss text-[10px] font-medium text-pine">{w.assignee.name.split(' ').map((n) => n[0]).slice(0, 2).join('')}</span>{w.assignee.name}</> : 'Unassigned'}
                     </p>
                     {can('admin', 'engineer') && (
-                      <div className="mt-2 flex flex-wrap gap-1 border-t border-line pt-2">
+                      <div className="mt-2.5 flex flex-wrap gap-1 border-t border-line pt-2">
                         {COLUMNS.filter((c) => c !== w.status).map((c) => <button key={c} className="btn btn-ghost btn-sm !px-2 text-[12px]" onClick={() => move.mutate({ id: w.id, status: c })}>{c === 'in_progress' ? 'Start' : c === 'done' ? 'Finish' : c === 'blocked' ? 'Block' : 'Plan'}</button>)}
                       </div>
                     )}

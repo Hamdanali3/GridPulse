@@ -48,7 +48,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     document.documentElement.dataset.theme = theme;
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) {
-      meta.setAttribute('content', theme === 'dark' ? '#161616' : '#14312B');
+      meta.setAttribute('content', theme === 'dark' ? '#131414' : '#fafafa');
     }
   }, [theme]);
 
@@ -97,11 +97,11 @@ export function ThemeToggle({ className }: { className?: string }) {
       aria-pressed={isDark}
       title={label}
       className={clsx(
-        'inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-control border border-line-strong bg-paper text-pine transition-colors hover:bg-moss',
+        'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-control border border-line bg-paper text-ink-muted transition-colors hover:border-line-strong hover:bg-moss hover:text-pine',
         className,
       )}
     >
-      {isDark ? <Sun className="h-[17px] w-[17px] text-amber" strokeWidth={1.75} /> : <Moon className="h-[17px] w-[17px]" strokeWidth={1.75} />}
+      {isDark ? <Sun className="h-[15px] w-[15px]" strokeWidth={1.6} /> : <Moon className="h-[15px] w-[15px]" strokeWidth={1.6} />}
     </button>
   );
 }

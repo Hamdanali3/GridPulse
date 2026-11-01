@@ -167,7 +167,7 @@ function MenuAnchor({
   );
 }
 
-/** Sticky top nav for the public landing page with full-width hover/focus mega-menus on desktop and collapsible menu on mobile. */
+/** Minimalist sticky top nav with full-width hover/focus mega-menus on desktop and collapsible menu on mobile. */
 export default function LandingNav() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
@@ -201,7 +201,6 @@ export default function LandingNav() {
 
   useEffect(() => () => clearCloseTimer(), []);
 
-  // Close menus on Escape, or close mobile menu if viewport grows past mobile breakpoint.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -228,10 +227,10 @@ export default function LandingNav() {
       className="sticky top-0 z-40 border-b border-line bg-mist"
       onMouseLeave={scheduleClose}
     >
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 md:px-8">
+      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4 md:px-8">
         <Link to="/" onMouseEnter={closeImmediately} className="flex items-center gap-2.5">
-          <Logo size={28} />
-          <span className="font-display text-[17px] font-semibold tracking-tight text-pine">GridPulse</span>
+          <Logo size={24} />
+          <span className="text-[15.5px] font-semibold tracking-tight text-pine">GridPulse</span>
         </Link>
 
         <nav
@@ -245,7 +244,7 @@ export default function LandingNav() {
             }
           }}
         >
-          <ul className="flex items-center gap-7">
+          <ul className="flex items-center gap-8">
             {MENUS.map((m) => {
               const isOpen = activeMenu === m.id && !escDismissed;
               return (
@@ -262,7 +261,7 @@ export default function LandingNav() {
                     aria-expanded={isOpen}
                     onClick={closeImmediately}
                     className={clsx(
-                      'inline-block py-1.5 text-[14px] font-medium transition-colors',
+                      'inline-block py-1.5 text-[13.5px] transition-colors',
                       isOpen ? 'text-pine' : 'text-ink-muted hover:text-pine',
                     )}
                   >
@@ -276,17 +275,17 @@ export default function LandingNav() {
                     )}
                     onMouseEnter={() => openMenu(m.id)}
                   >
-                    <div className="mx-auto max-w-6xl px-4 py-8 md:px-8">
-                      <div className="grid max-w-4xl grid-cols-[1.55fr_1fr_1fr] gap-12">
+                    <div className="mx-auto max-w-6xl px-4 py-9 md:px-8">
+                      <div className="grid max-w-4xl grid-cols-[1.6fr_1fr_1fr] gap-12">
                         <div>
-                          <p className="text-[12px] font-normal text-ink-muted">{m.primary.heading}</p>
-                          <ul className="mt-3 flex flex-col gap-2">
+                          <p className="eyebrow">{m.primary.heading}</p>
+                          <ul className="mt-3.5 flex flex-col gap-2">
                             {m.primary.items.map((item) => (
                               <li key={item.label}>
                                 <MenuAnchor
                                   item={item}
                                   onSelect={closeImmediately}
-                                  className="inline-block font-display text-[26px] font-bold leading-[1.18] tracking-tight text-pine transition-colors hover:text-teal"
+                                  className="inline-block text-[22px] font-semibold leading-[1.24] tracking-[-0.02em] text-pine transition-colors hover:text-ink-muted"
                                 />
                               </li>
                             ))}
@@ -297,7 +296,7 @@ export default function LandingNav() {
                                 key={fl.label}
                                 item={fl}
                                 onSelect={closeImmediately}
-                                className="text-[12.5px] font-medium text-ink-muted transition-colors hover:text-pine"
+                                className="text-[12px] text-ink-muted transition-colors hover:text-pine"
                               />
                             ))}
                           </div>
@@ -305,14 +304,14 @@ export default function LandingNav() {
 
                         {m.secondary.map((col) => (
                           <div key={col.heading}>
-                            <p className="text-[12px] font-normal text-ink-muted">{col.heading}</p>
-                            <ul className="mt-3 flex flex-col gap-2">
+                            <p className="eyebrow">{col.heading}</p>
+                            <ul className="mt-3.5 flex flex-col gap-2">
                               {col.items.map((item) => (
                                 <li key={item.label}>
                                   <MenuAnchor
                                     item={item}
                                     onSelect={closeImmediately}
-                                    className="inline-block text-[14px] font-semibold leading-snug text-pine transition-colors hover:text-teal"
+                                    className="inline-block text-[13.5px] font-medium leading-snug text-pine transition-colors hover:text-ink-muted"
                                   />
                                 </li>
                               ))}
@@ -328,7 +327,7 @@ export default function LandingNav() {
           </ul>
         </nav>
 
-        <div className="hidden items-center gap-2.5 md:flex" onMouseEnter={closeImmediately}>
+        <div className="hidden items-center gap-2 md:flex" onMouseEnter={closeImmediately}>
           <ThemeToggle />
           <Link to="/login" className="btn btn-ghost">Log in</Link>
           <Link to="/register" className="btn btn-primary">Get started</Link>
@@ -338,26 +337,26 @@ export default function LandingNav() {
           <ThemeToggle />
           <button
             type="button"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-control border border-line-strong bg-paper text-pine"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-control border border-line bg-paper text-pine"
             aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
             aria-expanded={mobileOpen}
             aria-controls="landing-mobile-menu"
             onClick={() => setMobileOpen((v) => !v)}
           >
-            {mobileOpen ? <X className="h-5 w-5" strokeWidth={1.75} /> : <Menu className="h-5 w-5" strokeWidth={1.75} />}
+            {mobileOpen ? <X className="h-4 w-4" strokeWidth={1.6} /> : <Menu className="h-4 w-4" strokeWidth={1.6} />}
           </button>
         </div>
       </div>
 
       {mobileOpen && (
         <nav id="landing-mobile-menu" aria-label="Mobile" className="border-t border-line bg-mist px-4 pb-4 pt-2 md:hidden">
-          <ul className="flex flex-col gap-1">
+          <ul className="flex flex-col gap-0.5">
             {MENUS.map((m) => (
               <li key={m.id}>
                 <a
                   href={m.href}
                   onClick={() => setMobileOpen(false)}
-                  className="block rounded-control px-2 py-2.5 text-[15px] font-medium text-pine transition-colors hover:bg-moss"
+                  className="block rounded-control px-2 py-2.5 text-[14.5px] text-pine transition-colors hover:bg-moss"
                 >
                   {m.label}
                 </a>

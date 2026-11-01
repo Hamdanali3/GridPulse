@@ -8,10 +8,6 @@ import { fmtAgo, fmtDateTime, humanize } from '../lib/format';
 import type { Alert, AlertStatus, Severity, Site, WorkOrder } from '../lib/types';
 import { AlertStatusChip, Drawer, EmptyState, ErrorNote, Field, PageHeader, Pagination, Segmented, SeverityChip } from '../components/ui';
 import { TableSkeleton } from '../components/ui/Skeleton';
-import { Flame, Gauge, PowerOff, Thermometer } from 'lucide-react';
-
-const typeIcon: Record<string, typeof Flame> = { low_efficiency: Gauge, high_temperature: Thermometer, asset_offline: PowerOff, zero_output: Flame };
-const stripColor: Record<string, string> = { critical: 'bg-ember', warning: 'bg-amber', info: 'bg-teal' };
 
 export default function AlertsPage() {
   const { can } = useAuth();
@@ -67,15 +63,14 @@ export default function AlertsPage() {
         {alerts.isLoading ? <TableSkeleton cols={3} /> : alerts.isError ? <div className="p-5"><ErrorNote message={errorMessage(alerts.error)} /></div> : alerts.data!.data.length === 0 ? <EmptyState title={status === 'open' ? 'No open alerts' : 'Nothing here'} hint={status === 'open' ? 'Every asset is inside its thresholds. New alerts appear here within seconds.' : 'Try another status or clear the filters.'} /> : (
           <ul className="divide-y divide-line">
             {alerts.data!.data.map((a) => (
-              <li key={a.id} className="relative grid gap-3 py-4 pl-6 pr-5 md:grid-cols-[auto_1fr_auto] md:items-center">
-                <span className={`absolute inset-y-0 left-0 w-1 ${stripColor[a.severity]}`} aria-hidden />
-                <div className="flex items-center gap-2">
-                  <span className={`flex h-8 w-8 items-center justify-center rounded-control ${a.severity === 'critical' ? 'tone-ember' : a.severity === 'warning' ? 'tone-warn' : 'tone-teal'}`}>{(() => { const I = typeIcon[a.type] ?? Flame; return <I className="h-4 w-4" />; })()}</span>
-                  <SeverityChip severity={a.severity} /><AlertStatusChip status={a.status} />
+              <li key={a.id} className="grid gap-3 px-5 py-4 md:grid-cols-[auto_1fr_auto] md:items-center">
+                <div className="flex items-center gap-1.5">
+                  <SeverityChip severity={a.severity} />
+                  <AlertStatusChip status={a.status} />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-[14px] text-ink">{a.message}</p>
-                  <p className="mt-0.5 text-[12.5px] text-ink-muted">
+                  <p className="text-[13.5px] text-ink">{a.message}</p>
+                  <p className="mt-0.5 text-[12px] text-ink-muted">
                     <Link to={`/sites/${a.site_id}`} className="font-medium text-teal hover:underline">{a.site?.name}</Link> · {a.asset?.tag} · {humanize(a.type)} · raised {fmtAgo(a.created_at)}
                     {a.acknowledged_by && <> · acknowledged by {a.acknowledged_by.name}</>}
                     {a.resolved_at && <> · resolved {fmtDateTime(a.resolved_at)}</>}

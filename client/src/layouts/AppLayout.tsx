@@ -1,7 +1,7 @@
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { clsx } from 'clsx';
 import { useQuery } from '@tanstack/react-query';
-import { Activity, Bell, ClipboardList, Cpu, FileBarChart, LogOut, MapPinned, Moon, Settings, ShieldCheck, Sun, Users } from 'lucide-react';
+import { Activity, Bell, ClipboardList, Cpu, FileBarChart, LogOut, MapPinned, Settings, ShieldCheck, Users } from 'lucide-react';
 import Logo from '../components/Logo';
 import AppFooter from '../components/AppFooter';
 import UserMenu from '../components/UserMenu';
@@ -38,7 +38,6 @@ export default function AppLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const clock = useZonedClock('Asia/Karachi');
-  const daylight = clock.hour >= 6 && clock.hour < 19;
 
   const openAlerts = useQuery({
     queryKey: ['alerts', 'open-count'],
@@ -59,17 +58,17 @@ export default function AppLayout() {
   const stale = live.data?.recorded_at ? Date.now() - new Date(live.data.recorded_at).getTime() > 60_000 : true;
 
   return (
-    <div className="flex h-screen h-dvh overflow-hidden">
-      {/* Rail */}
-      <aside className="hidden h-full min-h-0 w-[232px] shrink-0 flex-col border-r border-line bg-pine text-white md:flex">
-        <Link to="/" className="mx-5 mb-5 mt-6 flex shrink-0 items-center gap-2.5 self-start">
-          <Logo />
-          <div className="leading-tight">
-            <span className="block font-display text-[18px] font-semibold tracking-tight">GridPulse</span>
-            <span className="block text-[11.5px] text-white/65">Chitral operations · چترال</span>
-          </div>
-        </Link>
-        <nav className="flex flex-1 min-h-0 flex-col gap-0.5 overflow-y-auto px-3" aria-label="Primary">
+    <div className="flex h-screen h-dvh overflow-hidden bg-mist">
+      {/* Minimalist neutral sidebar rail */}
+      <aside className="hidden h-full min-h-0 w-[220px] shrink-0 flex-col border-r border-line bg-paper md:flex">
+        <div className="flex h-14 shrink-0 items-center border-b border-line px-4">
+          <Link to="/" className="flex items-center gap-2.5">
+            <Logo size={22} />
+            <span className="text-[15px] font-semibold tracking-tight text-pine">GridPulse</span>
+          </Link>
+        </div>
+
+        <nav className="flex flex-1 min-h-0 flex-col gap-0.5 overflow-y-auto px-2.5 py-3" aria-label="Primary">
           {items.map((item) => (
             <NavLink
               key={item.to}
@@ -77,79 +76,78 @@ export default function AppLayout() {
               end={'end' in item ? item.end : false}
               className={({ isActive }) =>
                 clsx(
-                  'flex items-center gap-3 rounded-control px-3 py-2.5 text-[14px] transition-colors',
-                  isActive ? 'bg-white/12 font-medium text-white' : 'text-white/75 hover:bg-white/6 hover:text-white',
+                  'flex items-center gap-2.5 rounded-control px-2.5 py-2 text-[13.5px] transition-colors',
+                  isActive ? 'bg-moss font-medium text-pine' : 'text-ink-muted hover:bg-moss/60 hover:text-pine',
                 )
               }
             >
-              <item.icon className="h-[18px] w-[18px]" strokeWidth={1.75} />
+              <item.icon className="h-[15px] w-[15px] shrink-0" strokeWidth={1.6} />
               <span className="flex-1">{item.label}</span>
               {item.to === '/alerts' && !!openAlerts.data && (
-                <span className="tabular rounded-chip bg-[#c63b25] px-1.5 text-[11.5px] font-semibold leading-[18px] text-white">{openAlerts.data}</span>
+                <span className="tabular rounded-chip border border-line bg-mist px-1.5 text-[11px] font-medium leading-[16px] text-pine">{openAlerts.data}</span>
               )}
             </NavLink>
           ))}
         </nav>
 
-        {/* Fleet pulse in the rail: always visible, whatever page you are on */}
-        <div className="mx-3 mb-3 shrink-0 rounded-control border border-white/12 bg-white/5 px-3 py-2.5">
-          <div className="flex items-center gap-2 text-[11.5px] text-white/65">
+        {/* Quiet live telemetry readout */}
+        <div className="mx-2.5 mb-2.5 shrink-0 rounded-control border border-line bg-mist px-3 py-2.5">
+          <div className="flex items-center gap-1.5 text-[11px] text-ink-faint">
             <span className={clsx('h-1.5 w-1.5 rounded-full', stale ? 'bg-ember' : 'bg-amber')} />
-            {stale ? 'Simulator idle' : 'Live'}
-            {live.data?.recorded_at && <span className="ml-auto">{fmtAgo(live.data.recorded_at)}</span>}
+            <span>{stale ? 'Idle' : 'Live'}</span>
+            {live.data?.recorded_at && <span className="ml-auto tabular">{fmtAgo(live.data.recorded_at)}</span>}
           </div>
-          <p className="mt-1 font-display text-[22px] font-semibold leading-none text-amber tabular">{fmtKw(live.data?.fleet_kw ?? 0)}</p>
-          <p className="mt-0.5 text-[11.5px] text-white/60">{live.data?.reporting_assets ?? 0} assets reporting</p>
+          <p className="mt-1 text-[19px] font-semibold leading-none tracking-[-0.02em] text-pine tabular">{fmtKw(live.data?.fleet_kw ?? 0)}</p>
+          <p className="mt-1 text-[11px] text-ink-faint">{live.data?.reporting_assets ?? 0} assets reporting</p>
         </div>
 
-        <div className="shrink-0 border-t border-white/12 px-3 py-3">
-          <NavLink to="/settings" className={({ isActive }) => clsx('flex items-center gap-3 rounded-control px-3 py-2.5 text-[14px] transition-colors', isActive ? 'bg-white/12 text-white' : 'text-white/75 hover:bg-white/6 hover:text-white')}>
-            <Settings className="h-[18px] w-[18px]" strokeWidth={1.75} />
+        <div className="shrink-0 border-t border-line px-2.5 py-2.5">
+          <NavLink to="/settings" className={({ isActive }) => clsx('flex items-center gap-2.5 rounded-control px-2.5 py-2 text-[13.5px] transition-colors', isActive ? 'bg-moss font-medium text-pine' : 'text-ink-muted hover:bg-moss/60 hover:text-pine')}>
+            <Settings className="h-[15px] w-[15px]" strokeWidth={1.6} />
             Settings
           </NavLink>
-          <button onClick={handleLogout} className="flex w-full items-center gap-3 rounded-control px-3 py-2.5 text-left text-[14px] text-white/75 transition-colors hover:bg-white/6 hover:text-white">
-            <LogOut className="h-[18px] w-[18px]" strokeWidth={1.75} />
+          <button onClick={handleLogout} className="flex w-full items-center gap-2.5 rounded-control px-2.5 py-2 text-left text-[13.5px] text-ink-muted transition-colors hover:bg-moss/60 hover:text-pine">
+            <LogOut className="h-[15px] w-[15px]" strokeWidth={1.6} />
             Log out
           </button>
-          <div className="mt-2 flex items-center gap-3 px-3 pt-2">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-control bg-amber font-display text-[13px] font-semibold text-[#14312b]">
+          <div className="mt-2 flex items-center gap-2.5 border-t border-line px-2.5 pt-2.5">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-control border border-line-strong bg-moss text-[12px] font-semibold text-pine">
               {user?.name?.slice(0, 1).toUpperCase()}
             </span>
             <div className="min-w-0">
-              <p className="truncate text-[13.5px] font-medium">{user?.name}</p>
-              <p className="truncate text-[12px] capitalize text-white/65">{user?.role}</p>
+              <p className="truncate text-[12.5px] font-medium text-pine">{user?.name}</p>
+              <p className="truncate text-[11px] capitalize text-ink-faint">{user?.role}</p>
             </div>
           </div>
         </div>
       </aside>
 
-      {/* Content: the only scrolling region */}
+      {/* Scrolling content column */}
       <div className="flex h-full min-w-0 flex-1 flex-col overflow-y-auto">
         <header className="sticky top-0 z-30 border-b border-line bg-mist">
-          <div className="flex items-center justify-between gap-3 px-4 py-2.5 md:px-8 md:py-3">
+          <div className="flex h-14 items-center justify-between gap-3 px-4 md:px-8">
             <Link to="/" className="inline-flex items-center gap-2 md:hidden">
-              <Logo size={24} />
-              <span className="font-display text-[16px] font-semibold text-pine">GridPulse</span>
+              <Logo size={22} />
+              <span className="text-[15px] font-semibold text-pine">GridPulse</span>
             </Link>
-            <div className="hidden min-w-0 md:block">
-              <p className="truncate font-display text-[17px] font-semibold leading-tight text-pine">{meta.title}</p>
-              <p className="truncate text-[12.5px] text-ink-muted">{meta.blurb}</p>
+            <div className="hidden min-w-0 items-baseline gap-3 md:flex">
+              <p className="truncate text-[15px] font-semibold text-pine">{meta.title}</p>
+              <span className="hidden truncate text-[12.5px] text-ink-faint xl:inline">{meta.blurb}</span>
             </div>
-            <div className="flex items-center gap-2 text-[13px] text-ink-muted md:gap-2.5">
-              <span className="hidden items-center gap-1.5 lg:inline-flex" title="Chitral local time">
-                {daylight ? <Sun className="h-3.5 w-3.5 text-amber" /> : <Moon className="h-3.5 w-3.5 text-teal" />}
+            <div className="flex items-center gap-2 text-[12.5px] text-ink-muted">
+              <span className="hidden items-center gap-1.5 pr-1 lg:inline-flex" title="Chitral local time">
                 <span className="tabular font-medium text-pine">{clock.time}</span>
-                <span>{clock.date}, Chitral</span>
+                <span className="text-ink-faint">· {clock.date}, Chitral</span>
               </span>
               <ThemeToggle />
               <NavLink
                 to="/alerts"
-                className="relative inline-flex h-9 w-9 items-center justify-center rounded-control border border-line-strong bg-paper text-pine transition-colors hover:bg-moss"
+                className="relative inline-flex h-8 w-8 items-center justify-center rounded-control border border-line bg-paper text-ink-muted transition-colors hover:border-line-strong hover:bg-moss hover:text-pine"
                 aria-label={openAlerts.data ? `${openAlerts.data} open alerts` : 'Alerts'}
               >
-                <Bell className="h-[17px] w-[17px]" strokeWidth={1.75} />
+                <Bell className="h-[15px] w-[15px]" strokeWidth={1.6} />
                 {!!openAlerts.data && (
-                  <span className="tabular absolute -right-1.5 -top-1.5 min-w-[18px] rounded-chip bg-[#c63b25] px-1 text-center text-[11px] font-semibold leading-[18px] text-white">
+                  <span className="tabular absolute -right-1 -top-1 min-w-[16px] rounded-chip bg-[#c63b25] px-1 text-center text-[10px] font-medium leading-[16px] text-white">
                     {openAlerts.data}
                   </span>
                 )}
@@ -158,7 +156,7 @@ export default function AppLayout() {
             </div>
           </div>
         </header>
-        <main className="flex-1 px-4 pb-12 pt-5 md:px-8 md:pb-14 md:pt-6" key={location.pathname}>
+        <main className="flex-1 px-4 pb-12 pt-6 md:px-8 md:pb-16 md:pt-8" key={location.pathname}>
           <Outlet />
         </main>
         <AppFooter lastReadingAt={live.data?.recorded_at} />
@@ -167,8 +165,8 @@ export default function AppLayout() {
       {/* Mobile tab bar */}
       <nav className="fixed inset-x-0 bottom-0 z-40 flex justify-around border-t border-line bg-paper px-1 pb-[env(safe-area-inset-bottom,0px)] md:hidden" aria-label="Primary">
         {nav.slice(0, 5).map((item) => (
-          <NavLink key={item.to} to={item.to} end={'end' in item ? item.end : false} className={({ isActive }) => clsx('flex flex-col items-center gap-0.5 px-2 py-2 text-[11px]', isActive ? 'text-pine' : 'text-ink-faint')}>
-            <item.icon className="h-5 w-5" strokeWidth={1.75} />
+          <NavLink key={item.to} to={item.to} end={'end' in item ? item.end : false} className={({ isActive }) => clsx('flex flex-col items-center gap-0.5 px-2 py-2 text-[11px]', isActive ? 'font-medium text-pine' : 'text-ink-faint')}>
+            <item.icon className="h-[18px] w-[18px]" strokeWidth={1.6} />
             {item.label}
           </NavLink>
         ))}

@@ -3,9 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { ArrowLeft } from 'lucide-react';
-import Ridge from '../components/Ridge';
 import RingGauge from '../components/charts/RingGauge';
-import { useZonedClock } from '../lib/hooks';
 import { del, errorMessage, get, getPaged } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { fmtAgo, fmtDate, fmtKw, fmtKwh, fmtNumber, kindLabel } from '../lib/format';
@@ -23,7 +21,6 @@ export default function SiteDetailPage() {
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [range, setRange] = useState<24 | 72 | 168>(24);
-  const clock = useZonedClock('Asia/Karachi');
 
   const site = useQuery({ queryKey: ['site', id], queryFn: () => get<Site>(`/sites/${id}`), refetchInterval: 15_000 });
   const summary = useQuery({ queryKey: ['site', id, 'summary'], queryFn: () => get<SiteSummary>(`/sites/${id}/summary`), refetchInterval: 15_000 });
@@ -47,37 +44,36 @@ export default function SiteDetailPage() {
     <div className="space-y-5">
       <Link to="/sites" className="inline-flex items-center gap-1.5 text-[13px] text-ink-muted hover:text-pine"><ArrowLeft className="h-3.5 w-3.5" /> All sites</Link>
 
-      <section className="panel-dark relative overflow-hidden">
-        <Ridge className="pointer-events-none absolute inset-x-0 bottom-0 h-[220px] w-full opacity-60" hour={clock.hour} sun={false} snow={false} />
-        <div className="relative grid gap-6 p-6 lg:grid-cols-[1fr_auto]">
+      <section className="panel-dark overflow-hidden">
+        <div className="grid gap-6 p-6 lg:grid-cols-[1fr_auto]">
           <div>
             <div className="flex flex-wrap items-center gap-3">
-              <h1 className="font-display text-[32px] font-semibold leading-tight text-white">{s.name}</h1>
+              <h1 className="text-[28px] font-semibold leading-tight tracking-[-0.025em] text-white">{s.name}</h1>
               <StatusChip status={s.status} />
             </div>
-            <p className="mt-1 flex flex-wrap items-center gap-x-3 text-[13.5px] text-white/60">
+            <p className="mt-1.5 flex flex-wrap items-center gap-x-3 text-[13px] text-white/55">
               <span className="tabular">{s.code}</span><span className="capitalize">{s.type}</span><span>{fmtNumber(s.capacity_mw, s.capacity_mw < 10 ? 1 : 0)} MW installed</span><span>{s.region}, {s.country}</span>{s.commissioned_at && <span>commissioned {fmtDate(s.commissioned_at)}</span>}
             </p>
-            <div className="mt-6 flex flex-wrap items-end gap-8">
+            <div className="mt-6 flex flex-wrap items-end gap-8 border-t border-white/10 pt-5">
               <div>
-                <p className="text-[12.5px] text-white/55">Output now</p>
-                <p className="font-display text-[48px] font-bold leading-none text-white tabular">{fmtKw(sum?.current_output_kw ?? s.current_output_kw)}</p>
+                <p className="text-[12px] text-white/50">Output now</p>
+                <p className="mt-1 text-[40px] font-semibold leading-none tracking-[-0.03em] text-white tabular">{fmtKw(sum?.current_output_kw ?? s.current_output_kw)}</p>
               </div>
               <div>
-                <p className="text-[12.5px] text-white/55">Energy today</p>
-                <p className="font-display text-[28px] font-semibold leading-none text-amber tabular">{fmtKwh(sum?.today_energy_kwh)}</p>
+                <p className="text-[12px] text-white/50">Energy today</p>
+                <p className="mt-1 text-[24px] font-semibold leading-none tracking-[-0.02em] text-amber tabular">{fmtKwh(sum?.today_energy_kwh)}</p>
               </div>
               <div>
-                <p className="text-[12.5px] text-white/55">Open alerts</p>
-                <p className={`font-display text-[28px] font-semibold leading-none tabular ${s.open_alerts ? 'text-[#FF8A73]' : 'text-white'}`}>{s.open_alerts ?? 0}</p>
+                <p className="text-[12px] text-white/50">Open alerts</p>
+                <p className={`mt-1 text-[24px] font-semibold leading-none tracking-[-0.02em] tabular ${s.open_alerts ? 'text-[#FF8A73]' : 'text-white'}`}>{s.open_alerts ?? 0}</p>
               </div>
               <div>
-                <p className="text-[12.5px] text-white/55">Open work orders</p>
-                <p className="font-display text-[28px] font-semibold leading-none text-white tabular">{sum?.open_work_orders ?? 0}</p>
+                <p className="text-[12px] text-white/50">Open work orders</p>
+                <p className="mt-1 text-[24px] font-semibold leading-none tracking-[-0.02em] text-white tabular">{sum?.open_work_orders ?? 0}</p>
               </div>
             </div>
           </div>
-          <div className="flex flex-col items-end gap-4">
+          <div className="flex flex-col items-end justify-between gap-4">
             {can('admin', 'engineer') && (
               <div className="flex gap-2">
                 <button className="btn btn-secondary btn-sm" onClick={() => setEditing(true)}>Edit site</button>
@@ -85,8 +81,8 @@ export default function SiteDetailPage() {
               </div>
             )}
             <div className="flex gap-6">
-              <RingGauge value={sum?.capacity_factor_pct ?? 0} label="Capacity factor" size={92} stroke={8} track="rgba(255,255,255,0.12)" dark />
-              <RingGauge value={sum?.availability_pct ?? 0} label="Availability" size={92} stroke={8} color="#7FC4C4" track="rgba(255,255,255,0.12)" dark sublabel={sum ? `${sum.assets_by_status.online ?? 0} of ${Object.values(sum.assets_by_status).reduce((a, b) => a + b, 0)} units` : undefined} />
+              <RingGauge value={sum?.capacity_factor_pct ?? 0} label="Capacity factor" size={88} stroke={6} track="rgba(255,255,255,0.12)" dark />
+              <RingGauge value={sum?.availability_pct ?? 0} label="Availability" size={88} stroke={6} color="#7FC4C4" track="rgba(255,255,255,0.12)" dark sublabel={sum ? `${sum.assets_by_status.online ?? 0} of ${Object.values(sum.assets_by_status).reduce((a, b) => a + b, 0)} units` : undefined} />
             </div>
           </div>
         </div>

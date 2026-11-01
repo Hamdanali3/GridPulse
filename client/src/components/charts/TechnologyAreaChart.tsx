@@ -18,8 +18,8 @@ export default function TechnologyAreaChart({ data, height = 260 }: { data: Type
         <defs>
           {SERIES.map((s) => (
             <linearGradient key={s.key} id={`fill-${s.key}`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={s.color} stopOpacity={0.55} />
-              <stop offset="100%" stopColor={s.color} stopOpacity={0.12} />
+              <stop offset="0%" stopColor={s.color} stopOpacity={0.28} />
+              <stop offset="100%" stopColor={s.color} stopOpacity={0.04} />
             </linearGradient>
           ))}
         </defs>

@@ -10,7 +10,7 @@ export default function SeverityDonut({ bySeverity, size = 88 }: { bySeverity: R
     <div style={{ width: size, height: size }} className="relative shrink-0" aria-label={`${total} open alerts by severity`}>
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
-          <Pie data={data} dataKey="value" innerRadius={size * 0.33} outerRadius={size * 0.48} paddingAngle={3} stroke="none" isAnimationActive={false}>
+          <Pie data={data} dataKey="value" innerRadius={size * 0.36} outerRadius={size * 0.47} paddingAngle={2} stroke="none" isAnimationActive={false}>
             {data.map((d) => <Cell key={d.name} fill={COLORS[d.name]} />)}
           </Pie>
           <Tooltip
@@ -19,7 +19,7 @@ export default function SeverityDonut({ bySeverity, size = 88 }: { bySeverity: R
           />
         </PieChart>
       </ResponsiveContainer>
-      <span className="pointer-events-none absolute inset-0 flex items-center justify-center font-display text-[18px] font-bold text-pine tabular">{total}</span>
+      <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-[12px] font-semibold text-pine tabular">{total}</span>
     </div>
   );
 }

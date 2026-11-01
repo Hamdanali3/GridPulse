@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { ArrowUpRight, Moon, Sun } from 'lucide-react';
+import { ArrowUpRight } from 'lucide-react';
 import { get, errorMessage } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { useAnimatedNumber, useZonedClock } from '../lib/hooks';
@@ -15,7 +15,6 @@ import Sparkline from '../components/charts/Sparkline';
 import { EmptyState, ErrorNote, Panel, SeverityChip, TypeGlyph } from '../components/ui';
 import { Skeleton } from '../components/ui/Skeleton';
 import { chitralSeason, sunTimes } from '../lib/sun';
-import { Droplets, Sunrise, Sunset } from 'lucide-react';
 
 const LIVE_MS = 5000;
 
@@ -44,87 +43,85 @@ export default function OverviewPage() {
   const season = chitralSeason(new Date());
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <div className="rise flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-[26px] font-semibold text-pine">{greeting}, {user?.name.split(' ')[0]}.</h1>
-          <p className="text-ink-muted">Chitral's fleet right now, {daylight ? 'solar hours' : 'night shift'} at {clock.time} local.</p>
+          <h1 className="text-[24px] font-semibold tracking-[-0.025em] text-pine">{greeting}, {user?.name.split(' ')[0]}.</h1>
+          <p className="mt-0.5 text-[13.5px] text-ink-muted">Chitral's fleet right now, {daylight ? 'solar hours' : 'night shift'} at {clock.time} local.</p>
         </div>
         <Link to="/reports" className="btn btn-secondary btn-sm">Energy report <ArrowUpRight className="h-3.5 w-3.5" /></Link>
       </div>
 
       {/* Hero: live fleet output on the dark control panel */}
-      <section className="panel-dark rise relative overflow-hidden">
-        <div className="chitral-strip" aria-hidden />
-        <div className="grid gap-6 p-6 lg:grid-cols-[320px_1fr]">
-        <div className="flex flex-col justify-between">
-          <div>
-            <div className="flex items-center gap-2 text-[13px] text-white/60">
-              <span className="pulse-dot" aria-hidden />
-              Live fleet output
-              {live.data?.recorded_at && <span className="text-white/40">· {fmtAgo(live.data.recorded_at)}</span>}
-            </div>
-            <p className="mt-2 font-display text-[60px] font-bold leading-none tracking-tight text-white tabular">{fmtKw(fleetKw, 1)}</p>
-            <p className="mt-2 text-white/65">
-              <span className="font-medium text-amber tabular">{fmtPct(cf)}</span> of {fmtKw(capacityKw, 0)} installed
-            </p>
-          </div>
-          <div className="mt-6 flex items-end justify-between gap-4 border-t border-white/10 pt-5">
-            <RingGauge value={cf} label="Capacity factor" size={96} stroke={9} track="rgba(255,255,255,0.12)" dark sublabel="of installed MW" />
-            <RingGauge value={o.fleet.availability_pct} label="Availability" size={96} stroke={9} color="#7FC4C4" track="rgba(255,255,255,0.12)" dark sublabel={`${live.data?.reporting_assets ?? o.fleet.total_assets} of ${o.fleet.total_assets} assets`} />
-            <div className="hidden text-right sm:block">
-              <p className="text-[12px] text-white/50">Right now</p>
-              <p className="mt-1 flex items-center justify-end gap-1.5 text-[13.5px] font-medium text-white">
-                {daylight ? <Sun className="h-4 w-4 text-amber" /> : <Moon className="h-4 w-4 text-[#7FC4C4]" />}
-                {daylight ? 'Daylight' : 'Night'}
+      <section className="panel-dark rise overflow-hidden">
+        <div className="grid gap-6 p-6 lg:grid-cols-[310px_1fr]">
+          <div className="flex flex-col justify-between">
+            <div>
+              <div className="flex items-center gap-2 text-[12.5px] text-white/60">
+                <span className="pulse-dot" aria-hidden />
+                Live fleet output
+                {live.data?.recorded_at && <span className="text-white/40">· {fmtAgo(live.data.recorded_at)}</span>}
+              </div>
+              <p className="mt-2.5 text-[48px] font-semibold leading-none tracking-[-0.03em] text-white tabular">{fmtKw(fleetKw, 1)}</p>
+              <p className="mt-2 text-[13px] text-white/60">
+                <span className="font-medium text-amber tabular">{fmtPct(cf)}</span> of {fmtKw(capacityKw, 0)} installed
               </p>
-              <p className="text-[11.5px] text-white/45">{daylight ? 'solar contributing' : 'hydro carrying the load'}</p>
+            </div>
+            <div className="mt-6 flex items-end justify-between gap-4 border-t border-white/10 pt-5">
+              <RingGauge value={cf} label="Capacity factor" size={88} stroke={6} track="rgba(255,255,255,0.12)" dark sublabel="of installed MW" />
+              <RingGauge value={o.fleet.availability_pct} label="Availability" size={88} stroke={6} color="#7FC4C4" track="rgba(255,255,255,0.12)" dark sublabel={`${live.data?.reporting_assets ?? o.fleet.total_assets} of ${o.fleet.total_assets} assets`} />
+              <div className="hidden text-right sm:block">
+                <p className="text-[11.5px] text-white/45">Right now</p>
+                <p className="mt-1 text-[13px] font-medium text-white">
+                  {daylight ? 'Daylight' : 'Night'}
+                </p>
+                <p className="text-[11.5px] text-white/45">{daylight ? 'solar contributing' : 'hydro carrying the load'}</p>
+              </div>
             </div>
           </div>
+          <div className="min-w-0">
+            {series.data && series.data.length > 1 ? (
+              <FleetLiveChart data={series.data} height={240} dark />
+            ) : (
+              <div className="flex h-[240px] items-center justify-center text-white/60">
+                Waiting for readings. Start the simulator: <code className="mx-1 rounded-chip bg-white/10 px-1.5 py-0.5 text-[12.5px]">php artisan schedule:work</code>
+              </div>
+            )}
+            <p className="mt-1 text-right text-[11.5px] text-white/40">Last 60 minutes, one-minute buckets, redrawn every 5 s</p>
+          </div>
         </div>
-        <div className="min-w-0">
-          {series.data && series.data.length > 1 ? (
-            <FleetLiveChart data={series.data} height={250} dark />
-          ) : (
-            <div className="flex h-[250px] items-center justify-center text-white/60">
-              Waiting for readings. Start the simulator: <code className="mx-1 rounded-chip bg-white/10 px-1.5 py-0.5 text-[12.5px]">php artisan schedule:work</code>
-            </div>
-          )}
-          <p className="mt-1 text-right text-[12px] text-white/40">Last 60 minutes, one-minute buckets, redrawn every 5 s</p>
-        </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-white/10 px-6 py-3 text-[12.5px] text-white/60">
-          <span className="flex items-center gap-1.5"><Sunrise className="h-3.5 w-3.5 text-amber" /> Sunrise <span className="font-medium text-white tabular">{sun.sunrise}</span></span>
-          <span className="flex items-center gap-1.5"><Sunset className="h-3.5 w-3.5 text-amber" /> Sunset <span className="font-medium text-white tabular">{sun.sunset}</span></span>
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-white/10 px-6 py-3 text-[12px] text-white/55">
+          <span>Sunrise <span className="font-medium text-white tabular">{sun.sunrise}</span></span>
+          <span>Sunset <span className="font-medium text-white tabular">{sun.sunset}</span></span>
           <span>{sun.daylightHours} h of solar window at 35.9° N</span>
-          <span className="flex items-center gap-1.5"><Droplets className="h-3.5 w-3.5 text-[#7FC4C4]" /> {season.label} <span className="text-white/40">· {season.note}</span></span>
+          <span>{season.label} <span className="text-white/40">· {season.note}</span></span>
           <span className="ml-auto text-white/35">Chitral, Khyber Pakhtunkhwa · چترال</span>
         </div>
       </section>
 
-      {/* KPI row */}
-      <section className="rise rise-2 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Kpi label="Energy today" value={fmtKwh(o.fleet.today_energy_kwh)} note="since midnight UTC" accent="amber" />
-        <Kpi label="Sites online" value={`${o.sites_by_status.online ?? 0} of ${o.fleet.total_sites}`} note={[o.sites_by_status.degraded ? `${o.sites_by_status.degraded} degraded` : null, o.sites_by_status.maintenance ? `${o.sites_by_status.maintenance} in maintenance` : null, o.sites_by_status.offline ? `${o.sites_by_status.offline} offline` : null].filter(Boolean).join(' · ') || 'all healthy'} to="/sites" accent="teal" />
-        <Kpi label="Open alerts" value={String(o.alerts.open)} note={`${o.alerts.by_severity.critical ?? 0} critical · ${o.alerts.by_severity.warning ?? 0} warning`} tone={o.alerts.by_severity.critical ? 'ember' : undefined} to="/alerts" accent="ember" />
-        <Kpi label="Work due this week" value={String(o.work_orders.due_this_week)} note={`${o.work_orders.by_status.in_progress ?? 0} in progress · ${o.work_orders.by_status.blocked ?? 0} blocked`} to="/work-orders" accent="pine" />
+      {/* KPI strip */}
+      <section className="panel rise rise-2 grid divide-y divide-line sm:grid-cols-2 sm:divide-y-0 sm:[&>*:nth-child(n+3)]:border-t sm:[&>*:nth-child(odd)]:border-r xl:grid-cols-4 xl:[&>*:nth-child(n+3)]:border-t-0 xl:[&>*:not(:last-child)]:border-r xl:[&>*]:border-line">
+        <Kpi label="Energy today" value={fmtKwh(o.fleet.today_energy_kwh)} note="since midnight UTC" />
+        <Kpi label="Sites online" value={`${o.sites_by_status.online ?? 0} of ${o.fleet.total_sites}`} note={[o.sites_by_status.degraded ? `${o.sites_by_status.degraded} degraded` : null, o.sites_by_status.maintenance ? `${o.sites_by_status.maintenance} in maintenance` : null, o.sites_by_status.offline ? `${o.sites_by_status.offline} offline` : null].filter(Boolean).join(' · ') || 'all healthy'} to="/sites" />
+        <Kpi label="Open alerts" value={String(o.alerts.open)} note={`${o.alerts.by_severity.critical ?? 0} critical · ${o.alerts.by_severity.warning ?? 0} warning`} tone={o.alerts.by_severity.critical ? 'ember' : undefined} to="/alerts" />
+        <Kpi label="Work due this week" value={String(o.work_orders.due_this_week)} note={`${o.work_orders.by_status.in_progress ?? 0} in progress · ${o.work_orders.by_status.blocked ?? 0} blocked`} to="/work-orders" />
       </section>
 
       <section className="rise rise-3">
         <Panel title="Chitral fleet map" action={<span className="text-[12.5px] text-ink-muted">{o.fleet.total_sites} plants across Upper and Lower Chitral · click a pin to open the plant</span>} bodyClassName="p-2">
-          <FleetMap sites={o.sites} height={540} />
+          <FleetMap sites={o.sites} height={520} />
         </Panel>
       </section>
 
       <section className="rise rise-3 grid gap-4 lg:grid-cols-[1fr_1fr]">
-        <Panel title="Needs attention" action={<div className="flex items-center gap-3"><SeverityDonut bySeverity={o.alerts.by_severity} size={56} /><Link to="/alerts" className="text-[13px] font-medium text-teal">All alerts</Link></div>} bodyClassName="p-0">
+        <Panel title="Needs attention" action={<div className="flex items-center gap-3"><SeverityDonut bySeverity={o.alerts.by_severity} size={40} /><Link to="/alerts" className="text-[13px] font-medium text-teal hover:underline">All alerts</Link></div>} bodyClassName="p-0">
           {o.alerts.recent.length === 0 ? (
             <EmptyState title="No open alerts" hint="Every unit is inside its thresholds." />
           ) : (
             <ul className="divide-y divide-line">
               {o.alerts.recent.slice(0, 6).map((a) => (
                 <li key={a.id} className="flex items-start gap-3 px-5 py-3.5">
-                  <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${a.severity === 'critical' ? 'bg-ember' : a.severity === 'warning' ? 'bg-amber' : 'bg-teal'}`} aria-hidden />
+                  <span className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${a.severity === 'critical' ? 'bg-ember' : a.severity === 'warning' ? 'bg-amber' : 'bg-teal'}`} aria-hidden />
                   <div className="min-w-0 flex-1">
                     <p className="text-[13.5px] leading-snug text-ink">{a.message}</p>
                     <p className="mt-0.5 text-[12px] text-ink-muted">{a.site?.name} · {fmtAgo(a.created_at)}</p>
@@ -138,17 +135,17 @@ export default function OverviewPage() {
         <Panel title="Generation by technology" action={<div className="flex gap-3 text-[12.5px] text-ink-muted">{typeRows.map((r) => <span key={r.type}><span className="font-medium text-pine tabular">{fmtKw(r.kw, 1)}</span> {humanize(r.type)}</span>)}</div>}>
           {byType.data && byType.data.length > 1 ? <><TechnologyAreaChart data={byType.data} /><p className="mt-1 text-right text-[12px] text-ink-faint">Last 24 hours, 30-minute buckets, stacked</p></> : <div className="flex h-[260px] items-center justify-center text-ink-muted">Collecting readings…</div>}
         </Panel>
-        <Panel title="Plant performance now" action={<Link to="/sites" className="text-[13px] font-medium text-teal">All sites</Link>} bodyClassName="p-0" className="lg:col-span-2">
+        <Panel title="Plant performance now" action={<Link to="/sites" className="text-[13px] font-medium text-teal hover:underline">All sites</Link>} bodyClassName="p-0" className="lg:col-span-2">
           <ul className="grid divide-y divide-line lg:grid-cols-2 lg:divide-y-0 lg:[&>li:nth-child(n+3)]:border-t lg:[&>li:nth-child(odd)]:border-r lg:[&>li]:border-line">
             {ranked.map((s) => (
               <li key={s.id}>
-                <Link to={`/sites/${s.id}`} className="grid grid-cols-[1fr_auto_auto] items-center gap-3 px-5 py-2.5 hover:bg-moss/40">
+                <Link to={`/sites/${s.id}`} className="grid grid-cols-[1fr_auto_auto] items-center gap-3 px-5 py-2.5 transition-colors hover:bg-moss/40">
                   <span className="flex min-w-0 items-center gap-2">
                     <TypeGlyph type={s.type} />
                     <span className="min-w-0 truncate text-[13.5px] font-medium text-pine">{s.name}</span>
                     <span className="hidden shrink-0 whitespace-nowrap text-[12px] text-ink-faint xl:inline">{s.code}</span>
                   </span>
-                  <Sparkline values={sparks.data?.[String(s.id)] ?? []} width={96} height={26} color={s.type === 'solar' ? '#F2A93B' : '#2E8B8B'} />
+                  <Sparkline values={sparks.data?.[String(s.id)] ?? []} width={96} height={24} color={s.type === 'solar' ? '#F2A93B' : '#2E8B8B'} />
                   <span className="w-[120px] text-right">
                     <span className="block text-[13.5px] font-semibold text-pine tabular">{fmtKw(s.current_output_kw)}</span>
                     <span className="flex items-center justify-end gap-1.5 text-[11.5px] text-ink-muted">
@@ -166,17 +163,15 @@ export default function OverviewPage() {
   );
 }
 
-function Kpi({ label, value, note, tone, to, accent }: { label: string; value: string; note?: string; tone?: 'ember'; to?: string; accent: 'amber' | 'teal' | 'ember' | 'pine' }) {
-  const bar = { amber: 'bg-amber', teal: 'bg-teal', ember: 'bg-ember', pine: 'bg-pine' }[accent];
+function Kpi({ label, value, note, tone, to }: { label: string; value: string; note?: string; tone?: 'ember'; to?: string }) {
   const body = (
-    <div className={`panel relative h-full overflow-hidden p-5 ${to ? 'card-link' : ''}`}>
-      <span className={`absolute left-0 top-4 h-8 w-1 rounded-r-[2px] ${bar}`} aria-hidden />
-      <p className="text-[13px] text-ink-muted">{label}</p>
-      <p className={`mt-1 font-display text-[30px] font-semibold leading-none tabular ${tone === 'ember' ? 'text-ember' : 'text-pine'}`}>{value}</p>
-      {note && <p className="mt-2 text-[12.5px] text-ink-faint">{note}</p>}
+    <div className={`h-full p-5 ${to ? 'transition-colors hover:bg-moss/40' : ''}`}>
+      <p className="text-[12.5px] text-ink-muted">{label}</p>
+      <p className={`mt-1.5 text-[26px] font-semibold leading-none tracking-[-0.025em] tabular ${tone === 'ember' ? 'text-ember' : 'text-pine'}`}>{value}</p>
+      {note && <p className="mt-2 text-[12px] text-ink-faint">{note}</p>}
     </div>
   );
-  return to ? <Link to={to} className="block rounded-panel">{body}</Link> : body;
+  return to ? <Link to={to} className="block">{body}</Link> : body;
 }
 
 function OverviewSkeleton() {

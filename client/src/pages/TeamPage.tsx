@@ -27,7 +27,7 @@ export default function TeamPage() {
               const self = u.id === me?.id;
               return (
                 <tr key={u.id}>
-                  <td className="font-medium text-pine">{u.name}{self && <span className="ml-2 chip bg-moss text-pine">You</span>}</td>
+                  <td className="font-medium text-pine">{u.name}{self && <span className="ml-2 chip tone-neutral">You</span>}</td>
                   <td className="text-ink-muted">{u.email}</td>
                   <td><select className="field w-auto py-1.5" value={u.role} disabled={self || update.isPending} onChange={(e) => update.mutate({ id: u.id, body: { role: e.target.value as Role } })} aria-label={`Role for ${u.name}`}><option value="admin">Admin</option><option value="engineer">Engineer</option><option value="viewer">Viewer</option></select></td>
                   <td><label className="inline-flex items-center gap-2"><input type="checkbox" className="accent-pine" checked={u.is_active} disabled={self || update.isPending} onChange={(e) => update.mutate({ id: u.id, body: { is_active: e.target.checked } })} aria-label={`Active for ${u.name}`} /><span className="text-[13px] text-ink-muted">{u.is_active ? 'Active' : 'Deactivated'}</span></label></td>

@@ -4,21 +4,22 @@ import Reveal from './Reveal';
 
 export default function FinalCta() {
   return (
-    <section className="border-t border-line bg-paper/60 py-16 md:py-20">
+    <section className="border-t border-line bg-paper py-16 md:py-24">
       <div className="mx-auto max-w-6xl px-4 md:px-8">
-        <Reveal className="panel-dark relative flex flex-col items-center gap-5 overflow-hidden p-10 text-center sm:p-14">
-          <div className="chitral-strip" aria-hidden />
-          <h2 className="max-w-[36ch] font-display text-[26px] font-semibold leading-tight text-white sm:text-[32px]">
-            See the whole fleet, in real time.
-          </h2>
-          <p className="max-w-[46ch] text-[15px] text-white/75">
-            Sign in with any of the three demo roles — admin, engineer or viewer — and look around.
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            <Link to="/register" className="btn bg-amber text-[#14312b] hover:bg-[#f5b959]">
-              Get started <ArrowRight className="h-4 w-4" />
+        <Reveal className="flex flex-col items-start justify-between gap-6 md:flex-row md:items-center">
+          <div>
+            <h2 className="text-[24px] font-semibold leading-tight tracking-[-0.022em] text-pine sm:text-[28px]">
+              See the whole fleet, in real time.
+            </h2>
+            <p className="mt-2 max-w-[48ch] text-[14.5px] text-ink-muted">
+              Sign in with any of the three demo roles — admin, engineer or viewer — and look around.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <Link to="/register" className="btn btn-primary">
+              Get started <ArrowRight className="h-3.5 w-3.5" strokeWidth={1.75} />
             </Link>
-            <Link to="/login" className="btn border-white/25 bg-transparent text-white hover:bg-white/10">
+            <Link to="/login" className="btn btn-secondary">
               Log in
             </Link>
           </div>

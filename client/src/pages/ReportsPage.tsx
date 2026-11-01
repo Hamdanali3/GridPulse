@@ -41,10 +41,10 @@ export default function ReportsPage() {
         <div className="pb-0.5"><Segmented ariaLabel="Group by" value={groupBy} onChange={setGroupBy} options={[{ value: 'site', label: 'By site' }, { value: 'type', label: 'By technology' }, { value: 'day', label: 'By day' }]} /></div>
       </div>
 
-      <div className="mb-4 grid gap-4 sm:grid-cols-3">
-        <div className="panel p-5"><p className="text-[13px] text-ink-muted">Total energy</p><p className="mt-1 font-display text-[30px] font-semibold leading-none text-pine tabular">{fmtKwh(total)}</p><p className="mt-2 text-[12.5px] text-ink-faint">{days} {days === 1 ? 'day' : 'days'} selected</p></div>
-        <div className="panel p-5"><p className="text-[13px] text-ink-muted">Average per day</p><p className="mt-1 font-display text-[30px] font-semibold leading-none text-pine tabular">{fmtKwh(total / days)}</p><p className="mt-2 text-[12.5px] text-ink-faint">across the whole fleet</p></div>
-        <div className="panel p-5"><p className="text-[13px] text-ink-muted">{groupBy === 'day' ? 'Best day' : groupBy === 'type' ? 'Leading technology' : 'Top plant'}</p><p className="mt-1 truncate font-display text-[24px] font-semibold leading-tight text-pine">{best ? (groupBy === 'type' ? humanize(best.label) : best.label) : '—'}</p><p className="mt-2 text-[12.5px] text-ink-faint">{best ? `${fmtKwh(best.kwh)} · ${total ? ((best.kwh / total) * 100).toFixed(0) : 0}% of total` : 'no data'}</p></div>
+      <div className="panel mb-4 grid divide-y divide-line sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+        <div className="p-5"><p className="text-[12.5px] text-ink-muted">Total energy</p><p className="mt-1 text-[26px] font-semibold leading-none tracking-[-0.025em] text-pine tabular">{fmtKwh(total)}</p><p className="mt-2 text-[12px] text-ink-faint">{days} {days === 1 ? 'day' : 'days'} selected</p></div>
+        <div className="p-5"><p className="text-[12.5px] text-ink-muted">Average per day</p><p className="mt-1 text-[26px] font-semibold leading-none tracking-[-0.025em] text-pine tabular">{fmtKwh(total / days)}</p><p className="mt-2 text-[12px] text-ink-faint">across the whole fleet</p></div>
+        <div className="p-5"><p className="text-[12.5px] text-ink-muted">{groupBy === 'day' ? 'Best day' : groupBy === 'type' ? 'Leading technology' : 'Top plant'}</p><p className="mt-1 truncate text-[22px] font-semibold leading-tight tracking-[-0.02em] text-pine">{best ? (groupBy === 'type' ? humanize(best.label) : best.label) : '—'}</p><p className="mt-2 text-[12px] text-ink-faint">{best ? `${fmtKwh(best.kwh)} · ${total ? ((best.kwh / total) * 100).toFixed(0) : 0}% of total` : 'no data'}</p></div>
       </div>
 
       <Panel title={`Energy ${from} to ${to}`} action={<span className="text-[13px] text-ink-muted">Total <span className="font-semibold text-pine tabular">{fmtKwh(total)}</span></span>}>
@@ -56,7 +56,7 @@ export default function ReportsPage() {
                 <XAxis type="number" tickFormatter={(v: number) => fmtKwh(v, 0)} tick={{ fontSize: 11.5, fill: 'var(--gp-text-muted)' }} axisLine={false} tickLine={false} />
                 <YAxis type="category" dataKey="label" width={groupBy === 'site' ? 180 : 90} tickFormatter={(v: string) => (groupBy === 'type' ? humanize(v) : v)} tick={{ fontSize: 12.5, fill: 'var(--gp-text)' }} axisLine={false} tickLine={false} />
                 <Tooltip cursor={{ fill: 'var(--gp-table-hover)' }} contentStyle={{ borderRadius: 'var(--radius-ui)', border: '1px solid var(--gp-border-strong)', boxShadow: 'none', fontSize: 13, background: 'var(--gp-panel)', color: 'var(--gp-text)' }} formatter={(v: number) => [fmtKwh(v, 1), 'Energy']} />
-                <Bar dataKey="kwh" radius={[0, 3, 3, 0]} barSize={18} isAnimationActive={false}>
+                <Bar dataKey="kwh" radius={[0, 2, 2, 0]} barSize={14} isAnimationActive={false}>
                   {energy.data.map((r) => <Cell key={r.key} fill={r.type === 'solar' || r.key === 'solar' ? '#F2A93B' : groupBy === 'day' ? '#F2A93B' : '#2E8B8B'} />)}
                 </Bar>
               </BarChart>

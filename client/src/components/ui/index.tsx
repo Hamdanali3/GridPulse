@@ -1,13 +1,13 @@
 import { clsx } from 'clsx';
-import { X, Loader2, Inbox } from 'lucide-react';
+import { X, Loader2 } from 'lucide-react';
 import { useEffect, type ReactNode } from 'react';
 import type { AlertStatus, OperationalStatus, Priority, Severity, SiteType, WorkOrderStatus } from '../../lib/types';
 import { humanize } from '../../lib/format';
 
-/* ---------- Status chips ---------- */
+/* ---------- Minimalist status chips ---------- */
 
 const statusStyles: Record<OperationalStatus, string> = {
-  online: 'bg-moss text-pine',
+  online: 'tone-neutral',
   degraded: 'tone-warn',
   offline: 'tone-ember',
   maintenance: 'tone-teal',
@@ -41,7 +41,7 @@ export function SeverityChip({ severity }: { severity: Severity }) {
 const alertStatusStyles: Record<AlertStatus, string> = {
   open: 'tone-ember',
   acknowledged: 'tone-warn',
-  resolved: 'bg-moss text-pine',
+  resolved: 'tone-neutral',
 };
 
 export function AlertStatusChip({ status }: { status: AlertStatus }) {
@@ -49,7 +49,7 @@ export function AlertStatusChip({ status }: { status: AlertStatus }) {
 }
 
 const priorityStyles: Record<Priority, string> = {
-  low: 'bg-mist text-ink-muted border border-line',
+  low: 'bg-mist text-ink-muted border-line',
   medium: 'tone-teal',
   high: 'tone-warn',
   urgent: 'tone-ember',
@@ -60,10 +60,10 @@ export function PriorityChip({ priority }: { priority: Priority }) {
 }
 
 const woStyles: Record<WorkOrderStatus, string> = {
-  planned: 'bg-mist text-ink-muted border border-line',
+  planned: 'bg-mist text-ink-muted border-line',
   in_progress: 'tone-teal',
   blocked: 'tone-ember',
-  done: 'bg-moss text-pine',
+  done: 'tone-neutral',
 };
 
 export function WorkOrderStatusChip({ status }: { status: WorkOrderStatus }) {
@@ -80,28 +80,27 @@ export function TypeMark({ type, className }: { type: SiteType; className?: stri
   );
 }
 
-export function TypeGlyph({ type, size = 14 }: { type: SiteType; size?: number }) {
+export function TypeGlyph({ type, size = 13 }: { type: SiteType; size?: number }) {
   if (type === 'solar')
     return (
       <svg width={size} height={size} viewBox="0 0 16 16" aria-hidden>
-        <circle cx="8" cy="8" r="3" fill="#F2A93B" />
-        <g stroke="#F2A93B" strokeWidth="1.4" strokeLinecap="round">
-          <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.4 1.4M11.6 11.6L13 13M3 13l1.4-1.4M11.6 4.4L13 3" />
+        <circle cx="8" cy="8" r="2.8" fill="#F2A93B" />
+        <g stroke="#F2A93B" strokeWidth="1.25" strokeLinecap="round">
+          <path d="M8 1.5v1.8M8 12.7v1.8M1.5 8h1.8M12.7 8h1.8M3.4 3.4l1.2 1.2M11.4 11.4l1.2 1.2M3.4 12.6l1.2-1.2M11.4 4.6l1.2-1.2" />
         </g>
       </svg>
     );
   if (type === 'wind')
     return (
-      <svg width={size} height={size} viewBox="0 0 16 16" aria-hidden>
-        <path d="M8 8v7" stroke="#2E8B8B" strokeWidth="1.6" strokeLinecap="round" />
-        <path d="M8 8 L8 1.5 M8 8 L13.6 11.2 M8 8 L2.4 11.2" stroke="#2E8B8B" strokeWidth="1.8" strokeLinecap="round" />
-        <circle cx="8" cy="8" r="1.4" fill="#2E8B8B" />
+      <svg width={size} height={size} viewBox="0 0 16 16" aria-hidden className="text-ink-faint">
+        <path d="M8 8v6.5" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" />
+        <path d="M8 8 L8 2 M8 8 L13.2 11 M8 8 L2.8 11" stroke="currentColor" strokeWidth="1.45" strokeLinecap="round" />
       </svg>
     );
   return (
-    <svg width={size} height={size} viewBox="0 0 16 16" aria-hidden>
-      <path d="M2 6c2 0 2 2 4 2s2-2 4-2 2 2 4 2" fill="none" stroke="#2E8B8B" strokeWidth="1.6" strokeLinecap="round" />
-      <path d="M2 11c2 0 2 2 4 2s2-2 4-2 2 2 4 2" fill="none" stroke="#2E8B8B" strokeWidth="1.6" strokeLinecap="round" />
+    <svg width={size} height={size} viewBox="0 0 16 16" aria-hidden className="text-ink-faint">
+      <path d="M2 6c2 0 2 1.8 4 1.8s2-1.8 4-1.8 2 1.8 4 1.8" fill="none" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" />
+      <path d="M2 10.8c2 0 2 1.8 4 1.8s2-1.8 4-1.8 2 1.8 4 1.8" fill="none" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" />
     </svg>
   );
 }
@@ -112,8 +111,8 @@ export function PageHeader({ title, description, actions }: { title: string; des
   return (
     <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
       <div>
-        <h1 className="text-[28px] font-semibold leading-tight text-pine">{title}</h1>
-        {description && <p className="mt-1 max-w-[62ch] text-ink-muted">{description}</p>}
+        <h1 className="text-[24px] font-semibold leading-tight tracking-[-0.022em] text-pine">{title}</h1>
+        {description && <p className="mt-1 max-w-[62ch] text-[13.5px] text-ink-muted">{description}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </div>
@@ -124,8 +123,8 @@ export function Panel({ title, action, children, className, bodyClassName }: { t
   return (
     <section className={clsx('panel', className)}>
       {(title || action) && (
-        <header className="flex items-center justify-between gap-3 border-b border-line px-5 py-3.5">
-          {title && <h2 className="text-[15px] font-semibold text-pine">{title}</h2>}
+        <header className="flex items-center justify-between gap-3 border-b border-line px-5 py-3">
+          {title && <h2 className="text-[14px] font-semibold text-pine">{title}</h2>}
           {action}
         </header>
       )}
@@ -136,19 +135,18 @@ export function Panel({ title, action, children, className, bodyClassName }: { t
 
 export function EmptyState({ title, hint, action }: { title: string; hint?: string; action?: ReactNode }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-2 py-14 text-center">
-      <Inbox className="h-7 w-7 text-ink-faint" strokeWidth={1.5} />
-      <p className="font-medium text-pine">{title}</p>
-      {hint && <p className="max-w-[46ch] text-ink-muted">{hint}</p>}
-      {action && <div className="mt-2">{action}</div>}
+    <div className="flex flex-col items-center justify-center gap-1.5 py-14 text-center">
+      <p className="text-[14px] font-medium text-pine">{title}</p>
+      {hint && <p className="max-w-[44ch] text-[13px] text-ink-muted">{hint}</p>}
+      {action && <div className="mt-3">{action}</div>}
     </div>
   );
 }
 
 export function Spinner({ label = 'Loading' }: { label?: string }) {
   return (
-    <div className="flex items-center justify-center gap-2 py-12 text-ink-muted" role="status">
-      <Loader2 className="h-4 w-4 animate-spin" />
+    <div className="flex items-center justify-center gap-2 py-12 text-[13px] text-ink-muted" role="status">
+      <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.6} />
       <span>{label}</span>
     </div>
   );
@@ -156,7 +154,7 @@ export function Spinner({ label = 'Loading' }: { label?: string }) {
 
 export function ErrorNote({ message }: { message: string }) {
   return (
-    <div className="tone-ember rounded-control border border-ember/40 px-4 py-3" role="alert">
+    <div className="tone-ember rounded-control border px-4 py-3 text-[13.5px]" role="alert">
       {message}
     </div>
   );
@@ -167,14 +165,14 @@ export function ErrorNote({ message }: { message: string }) {
 export function Field({ label, error, hint, children, htmlFor }: { label: string; error?: string; hint?: string; children: ReactNode; htmlFor?: string }) {
   return (
     <label className="block" htmlFor={htmlFor}>
-      <span className="mb-1.5 block text-[13px] font-medium text-pine">{label}</span>
+      <span className="mb-1.5 block text-[12.5px] font-medium text-pine">{label}</span>
       {children}
-      {error ? <span className="mt-1 block text-[12.5px] text-ember">{error}</span> : hint ? <span className="mt-1 block text-[12.5px] text-ink-faint">{hint}</span> : null}
+      {error ? <span className="mt-1 block text-[12px] text-ember">{error}</span> : hint ? <span className="mt-1 block text-[12px] text-ink-faint">{hint}</span> : null}
     </label>
   );
 }
 
-/* ---------- Drawer ---------- */
+/* ---------- Drawer & Dialog ---------- */
 
 export function Drawer({ open, onClose, title, children, footer, width = 'max-w-lg' }: { open: boolean; onClose: () => void; title: string; children: ReactNode; width?: string; footer?: ReactNode }) {
   useEffect(() => {
@@ -194,9 +192,9 @@ export function Drawer({ open, onClose, title, children, footer, width = 'max-w-
       <button className="modal-backdrop absolute inset-0" aria-label="Close" onClick={onClose} />
       <div className={clsx('relative flex h-full w-full flex-col border-l border-line-strong bg-paper', width)}>
         <header className="flex items-center justify-between border-b border-line px-6 py-4">
-          <h2 className="text-lg font-semibold text-pine">{title}</h2>
+          <h2 className="text-[16px] font-semibold text-pine">{title}</h2>
           <button className="btn btn-ghost btn-sm" onClick={onClose} aria-label="Close">
-            <X className="h-4 w-4" />
+            <X className="h-4 w-4" strokeWidth={1.6} />
           </button>
         </header>
         <div className="flex-1 overflow-y-auto px-6 py-5">{children}</div>
@@ -218,8 +216,8 @@ export function ConfirmDialog({ open, title, message, confirmLabel = 'Delete', o
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="alertdialog" aria-modal="true" aria-label={title}>
       <button className="modal-backdrop absolute inset-0" aria-label="Cancel" onClick={onCancel} />
       <div className="panel relative w-full max-w-md border-line-strong p-6">
-        <h2 className="text-lg font-semibold text-pine">{title}</h2>
-        <p className="mt-2 text-ink-muted">{message}</p>
+        <h2 className="text-[16px] font-semibold text-pine">{title}</h2>
+        <p className="mt-2 text-[13.5px] text-ink-muted">{message}</p>
         <div className="mt-6 flex justify-end gap-2">
           <button className="btn btn-secondary" onClick={onCancel} disabled={busy}>Keep it</button>
           <button className="btn btn-danger" onClick={onConfirm} disabled={busy}>{busy ? 'Working…' : confirmLabel}</button>
@@ -232,9 +230,9 @@ export function ConfirmDialog({ open, title, message, confirmLabel = 'Delete', o
 /* ---------- Pagination ---------- */
 
 export function Pagination({ page, pages, total, onChange }: { page: number; pages: number; total: number; onChange: (p: number) => void }) {
-  if (pages <= 1) return <p className="px-1 text-[13px] text-ink-muted">{total} {total === 1 ? 'result' : 'results'}</p>;
+  if (pages <= 1) return <p className="px-1 text-[12.5px] text-ink-faint">{total} {total === 1 ? 'result' : 'results'}</p>;
   return (
-    <div className="flex items-center justify-between gap-3 px-1 text-[13px] text-ink-muted">
+    <div className="flex items-center justify-between gap-3 px-1 text-[12.5px] text-ink-muted">
       <span>Page {page} of {pages} · {total} results</span>
       <div className="flex gap-1">
         <button className="btn btn-secondary btn-sm" onClick={() => onChange(page - 1)} disabled={page <= 1}>Previous</button>
@@ -256,12 +254,12 @@ export function Segmented<T extends string>({ value, options, onChange, ariaLabe
           aria-selected={o.value === value}
           onClick={() => onChange(o.value)}
           className={clsx(
-            'rounded-control px-3 py-1.5 text-[13px] font-medium transition-colors',
-            o.value === value ? 'seg-active' : 'text-ink-muted hover:bg-moss hover:text-pine',
+            'rounded-control border border-transparent px-3 py-1 text-[12.5px] font-medium transition-colors',
+            o.value === value ? 'seg-active' : 'text-ink-muted hover:text-pine',
           )}
         >
           {o.label}
-          {o.count !== undefined && <span className={clsx('ml-1.5 tabular', o.value === value ? 'text-amber' : 'text-ink-faint')}>{o.count}</span>}
+          {o.count !== undefined && <span className={clsx('ml-1.5 tabular text-[11.5px]', o.value === value ? 'text-pine' : 'text-ink-faint')}>{o.count}</span>}
         </button>
       ))}
     </div>
@@ -272,10 +270,10 @@ export function HealthBar({ value }: { value: number }) {
   const tone = value >= 85 ? 'bg-[#2f8f5b]' : value >= 65 ? 'bg-amber' : 'bg-ember';
   return (
     <div className="flex items-center gap-2" aria-label={`Health ${value}%`}>
-      <div className="h-1.5 w-20 overflow-hidden rounded-chip bg-moss">
+      <div className="h-1 w-16 overflow-hidden rounded-chip bg-moss">
         <div className={clsx('h-full rounded-chip', tone)} style={{ width: `${Math.max(2, Math.min(100, value))}%` }} />
       </div>
-      <span className="tabular text-[12.5px] text-ink-muted">{Math.round(value)}</span>
+      <span className="tabular text-[12px] text-ink-muted">{Math.round(value)}</span>
     </div>
   );
 }

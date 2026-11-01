@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
-import { MapPin, Plus, Search } from 'lucide-react';
+import { Plus, Search } from 'lucide-react';
 import Sparkline from '../components/charts/Sparkline';
 import { CardSkeleton, TableSkeleton } from '../components/ui/Skeleton';
 import { del, errorMessage, fieldErrors, getPaged, patch, post } from '../lib/api';
@@ -100,23 +100,23 @@ export default function SitesPage() {
               <article key={s.id} className="panel card-link relative flex flex-col p-5">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="flex items-center gap-1.5 text-[12px] text-ink-muted"><TypeGlyph type={s.type} /> {s.code}</p>
-                    <Link to={`/sites/${s.id}`} className="mt-0.5 block truncate text-[16px] font-semibold text-pine hover:underline">{s.name}</Link>
-                    <p className="flex items-center gap-1 text-[12px] text-ink-faint"><MapPin className="h-3 w-3" /> {s.region}</p>
+                    <p className="flex items-center gap-1.5 text-[11.5px] text-ink-muted tabular"><TypeGlyph type={s.type} /> {s.code}</p>
+                    <Link to={`/sites/${s.id}`} className="mt-1 block truncate text-[15.5px] font-semibold tracking-[-0.015em] text-pine hover:underline">{s.name}</Link>
+                    <p className="mt-0.5 text-[12px] text-ink-faint">{s.region}</p>
                   </div>
                   <StatusChip status={s.status} />
                 </div>
-                <div className="mt-4 flex items-end justify-between gap-3">
+                <div className="mt-5 flex items-end justify-between gap-3">
                   <div>
-                    <p className="font-display text-[28px] font-semibold leading-none text-pine tabular">{fmtKw(s.current_output_kw)}</p>
-                    <p className="mt-1 text-[12px] text-ink-muted"><span className="font-medium text-pine tabular">{fmtPct(cf, 0)}</span> of {fmtNumber(s.capacity_mw, s.capacity_mw < 10 ? 1 : 0)} MW</p>
+                    <p className="text-[24px] font-semibold leading-none tracking-[-0.025em] text-pine tabular">{fmtKw(s.current_output_kw)}</p>
+                    <p className="mt-1.5 text-[12px] text-ink-muted"><span className="font-medium text-pine tabular">{fmtPct(cf, 0)}</span> of {fmtNumber(s.capacity_mw, s.capacity_mw < 10 ? 1 : 0)} MW</p>
                   </div>
-                  <Sparkline values={sparks.data?.[String(s.id)] ?? []} width={120} height={36} color={s.type === 'solar' ? '#F2A93B' : '#2E8B8B'} />
+                  <Sparkline values={sparks.data?.[String(s.id)] ?? []} width={112} height={32} color={s.type === 'solar' ? '#F2A93B' : '#2E8B8B'} />
                 </div>
-                <div className="mt-3 h-1.5 w-full overflow-hidden rounded-chip bg-moss"><div className="h-full rounded-chip bg-amber" style={{ width: `${Math.min(100, cf)}%` }} /></div>
-                <div className="mt-4 flex items-center justify-between border-t border-line pt-3 text-[12.5px] text-ink-muted">
+                <div className="mt-3.5 h-1 w-full overflow-hidden rounded-chip bg-moss"><div className="h-full rounded-chip bg-amber" style={{ width: `${Math.min(100, cf)}%` }} /></div>
+                <div className="mt-4 flex items-center justify-between border-t border-line pt-3 text-[12px] text-ink-muted">
                   <span>{s.asset_count} {s.asset_count === 1 ? 'unit' : 'units'}</span>
-                  <span>{s.open_alerts ? <span className="font-semibold text-ember">{s.open_alerts} open {s.open_alerts === 1 ? 'alert' : 'alerts'}</span> : <span className="text-ink-faint">No open alerts</span>}</span>
+                  <span>{s.open_alerts ? <span className="font-medium text-ember">{s.open_alerts} open {s.open_alerts === 1 ? 'alert' : 'alerts'}</span> : <span className="text-ink-faint">No open alerts</span>}</span>
                   {can('admin', 'engineer') && <button className="btn btn-ghost btn-sm -mr-2" onClick={() => setEditing(s)}>Edit</button>}
                 </div>
               </article>

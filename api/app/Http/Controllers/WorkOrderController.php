@@ -30,6 +30,41 @@ class WorkOrderController extends Controller
                 $query->where($filter, $value);
             }
         }
+        $rawTypes = $request->query('types', $request->query('type'));
+        if (is_string($rawTypes) && trim($rawTypes) !== '') {
+            $types = array_values(array_intersect(
+                array_map('trim', explode(',', strtolower($rawTypes))),
+                ['solar', 'wind', 'hydro']
+            ));
+            if ($types !== []) {
+                $query->whereHas('site', fn ($sq) => $sq->whereIn('type', $types));
+            }
+        }
+        if ($from = $request->query('from')) {
+            try {
+                $fromTs = strlen((string) $from) <= 10
+                    ? \Carbon\Carbon::parse((string) $from)->startOfDay()
+                    : \Carbon\Carbon::parse((string) $from);
+                $query->where('created_at', '>=', $fromTs);
+            } catch (\Throwable) {
+                // ignore invalid date query parameter
+            }
+        }
+        if ($to = $request->query('to')) {
+            try {
+                $toTs = strlen((string) $to) <= 10
+                    ? \Carbon\Carbon::parse((string) $to)->endOfDay()
+                    : \Carbon\Carbon::parse((string) $to);
+                $query->where('created_at', '<=', $toTs);
+            } catch (\Throwable) {
+                // ignore invalid date query parameter
+            }
+        }
+        if (filter_var($request->query('overdue'), FILTER_VALIDATE_BOOLEAN) || $request->query('overdue') === '1') {
+            $query->where('status', '!=', WorkOrderStatus::Done->value)
+                ->whereNotNull('due_at')
+                ->where('due_at', '<', now());
+        }
         if ($q = $request->query('q')) {
             $query->where('title', 'like', '%'.$q.'%');
         }

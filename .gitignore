@@ -34,5 +34,12 @@ api/auth.json
 # Docker
 docker/mysql-data
 
+# Supabase CLI & local secrets
+supabase/.temp
+supabase/.branches
+supabase/.env
+supabase/.env.*
+!supabase/.env.example
+
 # TypeScript incremental build state
 *.tsbuildinfo

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Download } from 'lucide-react';
@@ -10,10 +11,20 @@ import type { EnergyRow } from '../lib/types';
 import { EmptyState, ErrorNote, Field, PageHeader, Panel, Segmented, Spinner } from '../components/ui';
 
 export default function ReportsPage() {
-  const [from, setFrom] = useState(format(subDays(new Date(), 7), 'yyyy-MM-dd'));
-  const [to, setTo] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [groupBy, setGroupBy] = useState<'site' | 'type' | 'day'>('site');
+  const [params, setParams] = useSearchParams();
+  const defaultFrom = format(subDays(new Date(), 7), 'yyyy-MM-dd');
+  const defaultTo = format(new Date(), 'yyyy-MM-dd');
+  const from = params.get('from') || defaultFrom;
+  const to = params.get('to') || defaultTo;
+  const rawGroup = params.get('group_by');
+  const groupBy: 'site' | 'type' | 'day' = rawGroup === 'type' || rawGroup === 'day' || rawGroup === 'site' ? rawGroup : 'site';
   const [downloading, setDownloading] = useState(false);
+
+  const setParam = (key: string, value: string) => {
+    const next = new URLSearchParams(params);
+    if (value) next.set(key, value); else next.delete(key);
+    setParams(next, { replace: true });
+  };
 
   const energy = useQuery({ queryKey: ['energy', { from, to, groupBy }], queryFn: () => get<EnergyRow[]>('/telemetry/energy', { from, to: `${to}T23:59:59`, group_by: groupBy }) });
   const total = energy.data?.reduce((a, r) => a + r.kwh, 0) ?? 0;
@@ -36,9 +47,9 @@ export default function ReportsPage() {
     <div>
       <PageHeader title="Reports" description="Energy produced over a date range, grouped the way you need it. Export the daily breakdown as CSV." actions={<button className="btn btn-secondary" onClick={download} disabled={downloading}><Download className="h-4 w-4" /> {downloading ? 'Preparing…' : 'Download CSV'}</button>} />
       <div className="mb-4 flex flex-wrap items-end gap-3">
-        <Field label="From"><input className="field w-auto" type="date" value={from} max={to} onChange={(e) => setFrom(e.target.value)} /></Field>
-        <Field label="To"><input className="field w-auto" type="date" value={to} min={from} onChange={(e) => setTo(e.target.value)} /></Field>
-        <div className="pb-0.5"><Segmented ariaLabel="Group by" value={groupBy} onChange={setGroupBy} options={[{ value: 'site', label: 'By site' }, { value: 'type', label: 'By technology' }, { value: 'day', label: 'By day' }]} /></div>
+        <Field label="From"><input className="field w-auto" type="date" value={from} max={to} onChange={(e) => setParam('from', e.target.value)} /></Field>
+        <Field label="To"><input className="field w-auto" type="date" value={to} min={from} onChange={(e) => setParam('to', e.target.value)} /></Field>
+        <div className="pb-0.5"><Segmented ariaLabel="Group by" value={groupBy} onChange={(v) => setParam('group_by', v)} options={[{ value: 'site', label: 'By site' }, { value: 'type', label: 'By technology' }, { value: 'day', label: 'By day' }]} /></div>
       </div>
 
       <div className="panel mb-4 grid divide-y divide-line sm:grid-cols-3 sm:divide-x sm:divide-y-0">

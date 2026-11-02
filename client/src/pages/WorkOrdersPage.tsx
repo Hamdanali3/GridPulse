@@ -5,12 +5,12 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
-import { Plus, Search } from 'lucide-react';
+import { Plus, Search, X } from 'lucide-react';
 import { clsx } from 'clsx';
 import { del, errorMessage, fieldErrors, getPaged, patch, post } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { fmtDate, humanize, toDateInput } from '../lib/format';
-import type { Asset, Site, User, WorkOrder, WorkOrderStatus } from '../lib/types';
+import type { Asset, Priority, Site, SiteType, User, WorkOrder, WorkOrderStatus } from '../lib/types';
 import { ConfirmDialog, Drawer, EmptyState, ErrorNote, Field, PageHeader, Pagination, PriorityChip, Segmented, WorkOrderStatusChip } from '../components/ui';
 import { CardSkeleton } from '../components/ui/Skeleton';
 
@@ -35,23 +35,105 @@ export default function WorkOrdersPage() {
   const view = (params.get('view') ?? 'board') as 'board' | 'table';
   const q = params.get('q') ?? '';
   const siteId = params.get('site_id') ?? '';
+  const statusFilter = (params.get('status') ?? '') as WorkOrderStatus | '';
+  const priorityFilter = (params.get('priority') ?? '') as Priority | '';
+  const rawTypes = params.get('types') ?? params.get('type') ?? '';
+  const selectedTypes = useMemo<SiteType[]>(
+    () =>
+      rawTypes
+        .split(',')
+        .map((t) => t.trim().toLowerCase())
+        .filter((t): t is SiteType => t === 'hydro' || t === 'solar' || t === 'wind'),
+    [rawTypes],
+  );
+  const fromFilter = params.get('from') ?? '';
+  const toFilter = params.get('to') ?? '';
+  const overdueFilter = params.get('overdue') === '1' || params.get('overdue') === 'true';
+  const assigneeParam = params.get('assignee_id') ?? '';
   const mine = params.get('mine') === '1';
+  const effectiveAssigneeId = mine ? (user?.id ? String(user.id) : '') : assigneeParam;
   const page = Number(params.get('page') ?? 1);
   const [editing, setEditing] = useState<WorkOrder | 'new' | null>(null);
   const [deleting, setDeleting] = useState<WorkOrder | null>(null);
   const [dragId, setDragId] = useState<number | null>(null);
   const [overCol, setOverCol] = useState<WorkOrderStatus | null>(null);
 
-  const setParam = (key: string, value: string) => { const next = new URLSearchParams(params); if (value) next.set(key, value); else next.delete(key); if (key !== 'page') next.delete('page'); setParams(next, { replace: true }); };
+  const setParam = (key: string, value: string) => {
+    const next = new URLSearchParams(params);
+    if (value) next.set(key, value);
+    else next.delete(key);
+    if (key === 'types') next.delete('type');
+    if (key !== 'page') next.delete('page');
+    setParams(next, { replace: true });
+  };
+
+  const toggleType = (t: SiteType) => {
+    const nextSet = selectedTypes.includes(t) ? selectedTypes.filter((x) => x !== t) : [...selectedTypes, t];
+    setParam('types', nextSet.join(','));
+  };
+
+  const clearDeepFilters = () => {
+    const next = new URLSearchParams();
+    if (view !== 'board') next.set('view', view);
+    setParams(next, { replace: true });
+  };
 
   const sites = useQuery({ queryKey: ['sites', 'all'], queryFn: () => getPaged<Site>('/sites', { limit: 100, sort: 'name' }) });
   const users = useQuery({ queryKey: ['users', 'all'], queryFn: () => getPaged<User>('/users', { limit: 100 }), enabled: can('admin') });
   const list = useQuery({
-    queryKey: ['work-orders', { q, siteId, mine, page, view }],
-    queryFn: () => getPaged<WorkOrder>('/work-orders', { q: q || undefined, site_id: siteId || undefined, assignee_id: mine ? user?.id : undefined, page: view === 'table' ? page : 1, limit: view === 'table' ? 20 : 100, sort: '-priority,due_at' }),
+    queryKey: ['work-orders', { q, siteId, statusFilter, priorityFilter, rawTypes, fromFilter, toFilter, overdueFilter, effectiveAssigneeId, page, view }],
+    queryFn: () =>
+      getPaged<WorkOrder>('/work-orders', {
+        q: q || undefined,
+        site_id: siteId || undefined,
+        status: statusFilter || undefined,
+        priority: priorityFilter || undefined,
+        types: selectedTypes.length ? selectedTypes.join(',') : undefined,
+        from: fromFilter || undefined,
+        to: toFilter || undefined,
+        overdue: overdueFilter ? '1' : undefined,
+        assignee_id: effectiveAssigneeId || undefined,
+        page: view === 'table' ? page : 1,
+        limit: view === 'table' ? 50 : 100,
+        sort: '-priority,due_at',
+      }),
     refetchInterval: 15_000,
     placeholderData: (prev) => prev,
   });
+
+  const siteTypeById = useMemo(() => {
+    const map = new Map<number, SiteType>();
+    for (const s of sites.data?.data ?? []) map.set(s.id, s.type);
+    return map;
+  }, [sites.data]);
+
+  const filteredItems = useMemo(() => {
+    const raw = list.data?.data ?? [];
+    const fromTime = fromFilter ? new Date(fromFilter.length <= 10 ? `${fromFilter}T00:00:00Z` : fromFilter).getTime() : null;
+    const toTime = toFilter ? new Date(toFilter.length <= 10 ? `${toFilter}T23:59:59.999Z` : toFilter).getTime() : null;
+    const nowTime = Date.now();
+    return raw.filter((w) => {
+      if (statusFilter && w.status !== statusFilter) return false;
+      if (priorityFilter && w.priority !== priorityFilter) return false;
+      if (effectiveAssigneeId && String(w.assignee_id ?? '') !== effectiveAssigneeId) return false;
+      if (selectedTypes.length > 0) {
+        const st = w.site?.type ?? siteTypeById.get(w.site_id);
+        if (st && !selectedTypes.includes(st)) return false;
+      }
+      if (fromTime !== null && Number.isFinite(fromTime)) {
+        const created = new Date(w.created_at).getTime();
+        if (Number.isFinite(created) && created < fromTime) return false;
+      }
+      if (toTime !== null && Number.isFinite(toTime)) {
+        const created = new Date(w.created_at).getTime();
+        if (Number.isFinite(created) && created > toTime) return false;
+      }
+      if (overdueFilter) {
+        if (w.status === 'done' || !w.due_at || new Date(w.due_at).getTime() >= nowTime) return false;
+      }
+      return true;
+    });
+  }, [list.data, statusFilter, priorityFilter, effectiveAssigneeId, selectedTypes, siteTypeById, fromFilter, toFilter, overdueFilter]);
 
   const invalidate = () => { void qc.invalidateQueries({ queryKey: ['work-orders'] }); void qc.invalidateQueries({ queryKey: ['alerts'] }); void qc.invalidateQueries({ queryKey: ['dashboard'] }); };
   const move = useMutation({ mutationFn: ({ id, status }: { id: number; status: WorkOrderStatus }) => patch<WorkOrder>(`/work-orders/${id}`, { status }), onSuccess: (wo) => { toast.success(`Moved to ${humanize(wo.status)}.`); invalidate(); }, onError: (e) => toast.error(errorMessage(e)) });
@@ -61,22 +143,67 @@ export default function WorkOrdersPage() {
   const onDrop = (e: DragEvent, status: WorkOrderStatus) => {
     e.preventDefault();
     const id = Number(e.dataTransfer.getData('text/plain')) || dragId;
-    const item = list.data?.data.find((w) => w.id === id);
+    const item = filteredItems.find((w) => w.id === id);
     setDragId(null); setOverCol(null);
     if (item && item.status !== status) move.mutate({ id: item.id, status });
   };
 
-  const grouped = useMemo(() => { const g: Record<WorkOrderStatus, WorkOrder[]> = { planned: [], in_progress: [], blocked: [], done: [] }; for (const w of list.data?.data ?? []) g[w.status].push(w); return g; }, [list.data]);
+  const grouped = useMemo(() => { const g: Record<WorkOrderStatus, WorkOrder[]> = { planned: [], in_progress: [], blocked: [], done: [] }; for (const w of filteredItems) g[w.status].push(w); return g; }, [filteredItems]);
+  const hasExtraFilters = Boolean(q || siteId || statusFilter || priorityFilter || selectedTypes.length || fromFilter || toFilter || overdueFilter || assigneeParam || mine);
 
   return (
     <div>
       <PageHeader title="Work orders" description="Maintenance and repair tasks, linked to the site, unit and alert they came from. Drag a card to change its status." actions={can('admin', 'engineer') && <button className="btn btn-primary" onClick={() => setEditing('new')}><Plus className="h-4 w-4" /> New work order</button>} />
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Segmented ariaLabel="View" value={view} onChange={(v) => setParam('view', v)} options={[{ value: 'board', label: 'Board' }, { value: 'table', label: 'Table' }]} />
-        <label className="relative"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint" /><input className="field w-56 pl-9" placeholder="Search titles" value={q} onChange={(e) => setParam('q', e.target.value)} aria-label="Search work orders" /></label>
+        <label className="relative"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint" /><input className="field w-52 pl-9" placeholder="Search titles" value={q} onChange={(e) => setParam('q', e.target.value)} aria-label="Search work orders" /></label>
         <select className="field w-auto" value={siteId} onChange={(e) => setParam('site_id', e.target.value)} aria-label="Filter by site"><option value="">All sites</option>{sites.data?.data.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
+        <select className="field w-auto" value={statusFilter} onChange={(e) => setParam('status', e.target.value)} aria-label="Filter by status"><option value="">All statuses</option><option value="planned">Planned</option><option value="in_progress">In progress</option><option value="blocked">Blocked</option><option value="done">Done</option></select>
+        <select className="field w-auto" value={priorityFilter} onChange={(e) => setParam('priority', e.target.value)} aria-label="Filter by priority"><option value="">All priorities</option><option value="urgent">Urgent</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select>
+        <div className="inline-flex items-center rounded-control border border-line bg-paper p-0.5" role="group" aria-label="Filter by technology">
+          {(['hydro', 'solar', 'wind'] as const).map((t) => {
+            const active = selectedTypes.includes(t);
+            return (
+              <button
+                key={t}
+                type="button"
+                onClick={() => toggleType(t)}
+                aria-pressed={active}
+                className={clsx('rounded-control border border-transparent px-2.5 py-1 text-[12px] font-medium capitalize transition-colors', active ? 'seg-active' : 'text-ink-muted hover:text-pine')}
+              >
+                {t}
+              </button>
+            );
+          })}
+        </div>
         <label className="flex items-center gap-2 text-[13.5px] text-ink-muted"><input type="checkbox" checked={mine} onChange={(e) => setParam('mine', e.target.checked ? '1' : '')} className="accent-pine" /> Assigned to me</label>
+        <label className="flex items-center gap-2 text-[13.5px] text-ink-muted"><input type="checkbox" checked={overdueFilter} onChange={(e) => setParam('overdue', e.target.checked ? '1' : '')} className="accent-pine" /> Overdue</label>
       </div>
+      {(fromFilter || toFilter || assigneeParam) && (
+        <div className="mb-4 flex flex-wrap items-center gap-1.5 text-[12px]">
+          {(fromFilter || toFilter) && (
+            <span className="chip tone-teal">
+              Window: {fromFilter || 'start'} → {toFilter || 'now'}
+              <button type="button" aria-label="Clear date range" className="ml-1 hover:text-pine" onClick={() => { const next = new URLSearchParams(params); next.delete('from'); next.delete('to'); setParams(next, { replace: true }); }}>
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          )}
+          {assigneeParam && !mine && (
+            <span className="chip tone-neutral">
+              Assignee #{assigneeParam}
+              <button type="button" aria-label="Clear assignee filter" className="ml-1 hover:text-pine" onClick={() => setParam('assignee_id', '')}>
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          )}
+          {hasExtraFilters && (
+            <button type="button" className="btn btn-ghost btn-sm !py-0.5 text-[12px]" onClick={clearDeepFilters}>
+              Clear all filters
+            </button>
+          )}
+        </div>
+      )}
 
       {list.isLoading ? <CardSkeleton count={4} /> : list.isError ? <ErrorNote message={errorMessage(list.error)} /> : view === 'board' ? (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -121,10 +248,10 @@ export default function WorkOrdersPage() {
         </div>
       ) : (
         <>
-          <div className="panel overflow-hidden">{list.data!.data.length === 0 ? <EmptyState title="No work orders" hint="Create one from an alert or from scratch." /> : (
+          <div className="panel overflow-hidden">{filteredItems.length === 0 ? <EmptyState title="No work orders" hint={hasExtraFilters ? 'No work orders match the active filters.' : 'Create one from an alert or from scratch.'} /> : (
             <div className="overflow-x-auto"><table className="table">
               <thead><tr><th>Title</th><th>Site</th><th>Priority</th><th>Status</th><th>Assignee</th><th>Due</th>{can('admin', 'engineer') && <th />}</tr></thead>
-              <tbody>{list.data!.data.map((w) => (
+              <tbody>{filteredItems.map((w) => (
                 <tr key={w.id}><td><p className="font-medium text-pine">{w.title}</p>{w.asset && <p className="text-[12px] text-ink-faint">{w.asset.tag}</p>}</td><td>{w.site?.name}</td><td><PriorityChip priority={w.priority} /></td><td><WorkOrderStatusChip status={w.status} /></td><td>{w.assignee?.name ?? <span className="text-ink-faint">Unassigned</span>}</td><td className="tabular">{fmtDate(w.due_at)}</td>{can('admin', 'engineer') && <td className="text-right"><div className="flex justify-end gap-1"><button className="btn btn-ghost btn-sm" onClick={() => setEditing(w)}>Edit</button>{can('admin') && <button className="btn btn-ghost btn-sm text-ember" onClick={() => setDeleting(w)}>Delete</button>}</div></td>}</tr>
               ))}</tbody>
             </table></div>

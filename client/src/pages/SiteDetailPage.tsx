@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { ArrowLeft } from 'lucide-react';
@@ -15,12 +15,20 @@ import { SiteDrawer } from './SitesPage';
 
 export default function SiteDetailPage() {
   const { id } = useParams();
+  const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
   const { can } = useAuth();
   const qc = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [range, setRange] = useState<24 | 72 | 168>(24);
+  const rawRange = Number(params.get('range') ?? 24);
+  const range: 24 | 72 | 168 = rawRange === 72 || rawRange === 168 ? rawRange : 24;
+  const setRange = (h: 24 | 72 | 168) => {
+    const next = new URLSearchParams(params);
+    if (h === 24) next.delete('range');
+    else next.set('range', String(h));
+    setParams(next, { replace: true });
+  };
 
   const site = useQuery({ queryKey: ['site', id], queryFn: () => get<Site>(`/sites/${id}`), refetchInterval: 15_000 });
   const summary = useQuery({ queryKey: ['site', id, 'summary'], queryFn: () => get<SiteSummary>(`/sites/${id}/summary`), refetchInterval: 15_000 });

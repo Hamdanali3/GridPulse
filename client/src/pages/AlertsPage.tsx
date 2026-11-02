@@ -15,6 +15,7 @@ export default function AlertsPage() {
   const [params, setParams] = useSearchParams();
   const status = (params.get('status') ?? 'open') as AlertStatus | 'all';
   const severity = (params.get('severity') ?? '') as Severity | '';
+  const alertType = params.get('type') ?? '';
   const siteId = params.get('site_id') ?? '';
   const page = Number(params.get('page') ?? 1);
   const [converting, setConverting] = useState<Alert | null>(null);
@@ -40,8 +41,8 @@ export default function AlertsPage() {
     refetchInterval: 15_000,
   });
   const alerts = useQuery({
-    queryKey: ['alerts', { status, severity, siteId, page }],
-    queryFn: () => getPaged<Alert>('/alerts', { status: status === 'all' ? undefined : status, severity: severity || undefined, site_id: siteId || undefined, page, limit: 20 }),
+    queryKey: ['alerts', { status, severity, alertType, siteId, page }],
+    queryFn: () => getPaged<Alert>('/alerts', { status: status === 'all' ? undefined : status, severity: severity || undefined, type: alertType || undefined, site_id: siteId || undefined, page, limit: 20 }),
     refetchInterval: 10_000,
     placeholderData: (prev) => prev,
   });
@@ -56,6 +57,7 @@ export default function AlertsPage() {
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Segmented ariaLabel="Alert status" value={status} onChange={(v) => setParam('status', v)} options={[{ value: 'open', label: 'Open', count: counts.data?.open }, { value: 'acknowledged', label: 'Acknowledged', count: counts.data?.acknowledged }, { value: 'resolved', label: 'Resolved', count: counts.data?.resolved }, { value: 'all', label: 'All' }]} />
         <select className="field w-auto" value={severity} onChange={(e) => setParam('severity', e.target.value)} aria-label="Filter by severity"><option value="">All severities</option><option value="critical">Critical</option><option value="warning">Warning</option><option value="info">Info</option></select>
+        <select className="field w-auto" value={alertType} onChange={(e) => setParam('type', e.target.value)} aria-label="Filter by rule"><option value="">All rules</option><option value="asset_offline">Asset offline</option><option value="low_efficiency">Low efficiency</option><option value="high_temperature">High temperature</option><option value="zero_output">Zero output</option></select>
         <select className="field w-auto" value={siteId} onChange={(e) => setParam('site_id', e.target.value)} aria-label="Filter by site"><option value="">All sites</option>{sites.data?.data.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
       </div>
 

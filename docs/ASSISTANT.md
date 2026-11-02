@@ -167,3 +167,4 @@ cd api && php artisan test
 # Frontend TypeScript lint, SSR block-rendering test across all chart/table/card types, and production build
 cd client && npm run lint && npm run test:assistant && npm run build
 ```
+

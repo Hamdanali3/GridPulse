@@ -25,3 +25,4 @@ class AssistantUsage extends Model
         ];
     }
 }
+

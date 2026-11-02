@@ -22,3 +22,4 @@ interface ToolInterface
      */
     public function execute(array $args, AssistantContext $ctx): array;
 }
+

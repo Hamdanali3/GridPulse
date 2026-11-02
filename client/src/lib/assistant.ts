@@ -442,3 +442,4 @@ export function clearSessionMessages(userId: number): void {
     // Ignore
   }
 }
+

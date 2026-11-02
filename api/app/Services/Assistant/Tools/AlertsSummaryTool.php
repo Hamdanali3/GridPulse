@@ -95,3 +95,4 @@ final class AlertsSummaryTool extends AbstractTool
         ];
     }
 }
+

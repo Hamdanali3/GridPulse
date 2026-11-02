@@ -76,3 +76,4 @@ final class ToolRegistry
         return $tool->execute($args, $ctx);
     }
 }
+

@@ -432,3 +432,4 @@ final class ResponseValidator
         return ucwords(str_replace('_', ' ', $key));
     }
 }
+

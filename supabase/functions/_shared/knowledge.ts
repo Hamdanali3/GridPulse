@@ -109,3 +109,4 @@ export function searchKnowledge(query: string, limit = 4): KnowledgeTopic[] {
 export function fullKnowledgeContext(): string {
   return KNOWLEDGE_TOPICS.map((t) => `### ${t.title}\n${t.content}`).join('\n\n');
 }
+

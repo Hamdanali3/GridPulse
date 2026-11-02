@@ -72,3 +72,4 @@ class GroqClient
         return (array) $response->json();
     }
 }
+

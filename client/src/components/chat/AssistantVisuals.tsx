@@ -353,3 +353,4 @@ export function AssistantVisualBlock({ visual }: { visual: AssistantVisual }) {
   }
   return <RechartsVisual visual={visual} />;
 }
+

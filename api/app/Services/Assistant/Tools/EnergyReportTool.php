@@ -62,3 +62,4 @@ final class EnergyReportTool extends AbstractTool
         ];
     }
 }
+

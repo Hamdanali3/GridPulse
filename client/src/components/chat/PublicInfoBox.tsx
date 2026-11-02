@@ -314,3 +314,4 @@ export default function PublicInfoBox({ variant = 'landing' }: Props) {
     </section>
   );
 }
+

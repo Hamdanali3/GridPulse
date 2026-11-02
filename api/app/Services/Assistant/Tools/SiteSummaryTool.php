@@ -118,3 +118,4 @@ final class SiteSummaryTool extends AbstractTool
         ];
     }
 }
+

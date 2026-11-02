@@ -43,3 +43,4 @@ final class ProjectKnowledgeTool extends AbstractTool
         ];
     }
 }
+

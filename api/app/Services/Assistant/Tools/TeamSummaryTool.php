@@ -64,3 +64,4 @@ final class TeamSummaryTool extends AbstractTool
         ];
     }
 }
+

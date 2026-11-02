@@ -214,3 +214,4 @@ class AssistantContractAndRbacTest extends TestCase
         $this->assertSame(1, $audit['count']);
     }
 }
+

@@ -202,3 +202,4 @@ export async function writeAssistantLog(entry: {
     // Logging must never crash the assistant response stream
   }
 }
+

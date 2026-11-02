@@ -332,3 +332,4 @@ export function buildLinkHref(link: DeepLink): string {
   const qs = sp.toString();
   return qs ? `${link.route}?${qs}` : link.route;
 }
+

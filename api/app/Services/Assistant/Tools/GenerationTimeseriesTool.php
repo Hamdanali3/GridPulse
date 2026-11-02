@@ -93,3 +93,4 @@ final class GenerationTimeseriesTool extends AbstractTool
         ];
     }
 }
+

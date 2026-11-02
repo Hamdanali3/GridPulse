@@ -1530,3 +1530,4 @@ GRANT EXECUTE ON FUNCTION public.gp_assistant_resolve_user(text) TO anon, authen
 GRANT EXECUTE ON FUNCTION public.gp_assistant_bootstrap(text) TO anon, authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.gp_assistant_exec_tool(text, text, jsonb) TO anon, authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.gp_api(text, text, jsonb, jsonb, text, text, text) TO anon, authenticated, service_role;
+

@@ -17,6 +17,7 @@ import NotFoundPage from './pages/NotFoundPage';
 import LandingPage from './pages/LandingPage';
 import type { Role } from './lib/types';
 import { Spinner } from './components/ui';
+import ErrorBoundary from './components/ErrorBoundary';
 
 function RequireAuth({ children, roles }: { children: JSX.Element; roles?: Role[] }) {
   const { user, loading } = useAuth();
@@ -41,22 +42,24 @@ function PublicOnly({ children }: { children: JSX.Element }) {
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/login" element={<PublicOnly><LoginPage /></PublicOnly>} />
-      <Route path="/register" element={<PublicOnly><RegisterPage /></PublicOnly>} />
-      <Route element={<RequireAuth><AppLayout /></RequireAuth>}>
-        <Route index element={<OverviewPage />} />
-        <Route path="sites" element={<SitesPage />} />
-        <Route path="sites/:id" element={<SiteDetailPage />} />
-        <Route path="assets" element={<AssetsPage />} />
-        <Route path="alerts" element={<AlertsPage />} />
-        <Route path="work-orders" element={<WorkOrdersPage />} />
-        <Route path="reports" element={<ReportsPage />} />
-        <Route path="team" element={<RequireAuth roles={['admin']}><TeamPage /></RequireAuth>} />
-        <Route path="audit" element={<RequireAuth roles={['admin']}><AuditPage /></RequireAuth>} />
-        <Route path="settings" element={<SettingsPage />} />
-      </Route>
-      <Route path="*" element={<NotFoundPage />} />
-    </Routes>
+    <ErrorBoundary>
+      <Routes>
+        <Route path="/login" element={<PublicOnly><LoginPage /></PublicOnly>} />
+        <Route path="/register" element={<PublicOnly><RegisterPage /></PublicOnly>} />
+        <Route element={<RequireAuth><AppLayout /></RequireAuth>}>
+          <Route index element={<OverviewPage />} />
+          <Route path="sites" element={<SitesPage />} />
+          <Route path="sites/:id" element={<SiteDetailPage />} />
+          <Route path="assets" element={<AssetsPage />} />
+          <Route path="alerts" element={<AlertsPage />} />
+          <Route path="work-orders" element={<WorkOrdersPage />} />
+          <Route path="reports" element={<ReportsPage />} />
+          <Route path="team" element={<RequireAuth roles={['admin']}><TeamPage /></RequireAuth>} />
+          <Route path="audit" element={<RequireAuth roles={['admin']}><AuditPage /></RequireAuth>} />
+          <Route path="settings" element={<SettingsPage />} />
+        </Route>
+        <Route path="*" element={<NotFoundPage />} />
+      </Routes>
+    </ErrorBoundary>
   );
 }

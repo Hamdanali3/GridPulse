@@ -22,6 +22,7 @@ import {
   type SessionChatMessage,
 } from '../../lib/assistant';
 import AssistantMessageCard from './AssistantMessageCard';
+import ErrorBoundary from '../ErrorBoundary';
 
 const ROLE_SUBTITLE: Record<string, string> = {
   admin: 'Admin · Chief-of-Staff',
@@ -406,51 +407,58 @@ export default function ChatDock() {
 
           {/* Messages / Starter State */}
           <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto p-3.5">
-            {messages.length === 0 ? (
-              <div className="space-y-3.5">
-                <div className="rounded-panel border border-line bg-paper p-3.5">
-                  <p className="text-[13px] leading-relaxed text-ink">{boot.welcome}</p>
-                  <p className="mt-2 text-[11.5px] text-ink-faint">
-                    Answers come strictly from live GridPulse records and include verified links to inspect or act in the control room.
-                  </p>
-                </div>
+            <ErrorBoundary onReset={handleClear}>
+              {messages.length === 0 ? (
+                <div className="space-y-3.5">
+                  <div className="rounded-panel border border-line bg-paper p-3.5">
+                    <p className="text-[13px] leading-relaxed text-ink">{boot?.welcome || 'Welcome to PulseBot Operations Copilot.'}</p>
+                    <p className="mt-2 text-[11.5px] text-ink-faint">
+                      Answers come strictly from live GridPulse records and include verified links to inspect or act in the control room.
+                    </p>
+                  </div>
 
-                <div>
-                  <p className="mb-2 text-[11.5px] font-medium text-ink-faint">
-                    Suggested questions for {user.role}
-                  </p>
-                  <div className="flex flex-col gap-1.5">
-                    {boot.starters.map((starter, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        disabled={isStreaming}
-                        onClick={() => void sendPrompt(starter)}
-                        className="rounded-control border border-line bg-paper px-3 py-2 text-left text-[12.5px] text-ink transition-colors hover:border-line-strong hover:bg-moss"
-                      >
-                        {starter}
-                      </button>
-                    ))}
+                  <div>
+                    <p className="mb-2 text-[11.5px] font-medium text-ink-faint">
+                      Suggested questions for {user.role}
+                    </p>
+                    <div className="flex flex-col gap-1.5">
+                      {(Array.isArray(boot?.starters) ? boot.starters : []).map((starter, idx) => {
+                        const promptText = typeof starter === 'string' ? starter : (starter as unknown as { prompt?: string; label?: string })?.prompt || (starter as unknown as { prompt?: string; label?: string })?.label || '';
+                        const labelText = typeof starter === 'string' ? starter : (starter as unknown as { prompt?: string; label?: string })?.label || (starter as unknown as { prompt?: string; label?: string })?.prompt || '';
+                        if (!promptText) return null;
+                        return (
+                          <button
+                            key={idx}
+                            type="button"
+                            disabled={isStreaming}
+                            onClick={() => void sendPrompt(promptText)}
+                            className="rounded-control border border-line bg-paper px-3 py-2 text-left text-[12.5px] text-ink transition-colors hover:border-line-strong hover:bg-moss"
+                          >
+                            {labelText}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ) : (
-              messages.map((msg) => (
-                <AssistantMessageCard
-                  key={msg.id}
-                  message={msg}
-                  disabled={isStreaming}
-                  onFollowup={(q) => void sendPrompt(q)}
-                  onRetry={handleRetry}
-                  onNavigate={() => {
-                    // On mobile screens, close dock on deep-link navigation so the destination page is immediately visible
-                    if (window.innerWidth < 768) {
-                      setOpen(false);
-                    }
-                  }}
-                />
-              ))
-            )}
+              ) : (
+                messages.map((msg) => (
+                  <AssistantMessageCard
+                    key={msg.id}
+                    message={msg}
+                    disabled={isStreaming}
+                    onFollowup={(q) => void sendPrompt(q)}
+                    onRetry={handleRetry}
+                    onNavigate={() => {
+                      // On mobile screens, close dock on deep-link navigation so the destination page is immediately visible
+                      if (window.innerWidth < 768) {
+                        setOpen(false);
+                      }
+                    }}
+                  />
+                ))
+              )}
+            </ErrorBoundary>
           </div>
 
           {/* Composer */}

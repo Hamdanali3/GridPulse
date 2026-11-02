@@ -58,10 +58,10 @@ export default function AssistantMessageCard({
   const handleCopy = async () => {
     if (!summaryText) return;
     const kpiLines =
-      res?.kpis?.length
+      Array.isArray(res?.kpis) && res.kpis.length > 0
         ? '\n\n' +
           res.kpis
-            .map((k) => `• ${k.label}: ${k.value}${k.unit ? ` ${k.unit}` : ''}${k.delta ? ` (${k.delta})` : ''}`)
+            .map((k) => `• ${k?.label ?? 'Metric'}: ${k?.value ?? ''}${k?.unit ? ` ${k.unit}` : ''}${k?.delta ? ` (${k.delta})` : ''}`)
             .join('\n')
         : '';
     try {
@@ -143,17 +143,17 @@ export default function AssistantMessageCard({
       {/* Structured blocks once server-validated response arrives */}
       {res && (
         <>
-          {res.kpis.length > 0 && <KpiGrid kpis={res.kpis} />}
+          {Array.isArray(res.kpis) && res.kpis.length > 0 && <KpiGrid kpis={res.kpis} />}
 
-          {res.visuals.length > 0 && (
+          {Array.isArray(res.visuals) && res.visuals.length > 0 && (
             <div className="space-y-2.5">
               {res.visuals.map((vis, idx) => (
-                <AssistantVisualBlock key={`${vis.type}-${idx}`} visual={vis} />
+                <AssistantVisualBlock key={`${vis?.type || 'visual'}-${idx}`} visual={vis} />
               ))}
             </div>
           )}
 
-          {res.insights.length > 0 && (
+          {Array.isArray(res.insights) && res.insights.length > 0 && (
             <div className="space-y-1.5 rounded-control border border-line bg-mist px-3 py-2.5">
               <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-ink-faint">
                 <Sparkles className="h-3 w-3 text-amber" />
@@ -163,7 +163,7 @@ export default function AssistantMessageCard({
                 {res.insights.map((ins, idx) => (
                   <li key={idx} className="flex items-start gap-2">
                     <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-teal" />
-                    <span>{ins}</span>
+                    <span>{typeof ins === 'string' ? ins : String(ins)}</span>
                   </li>
                 ))}
               </ul>
@@ -171,16 +171,16 @@ export default function AssistantMessageCard({
           )}
 
           {/* Verified React Router Deep Links */}
-          {res.links.length > 0 && (
+          {Array.isArray(res.links) && res.links.length > 0 && (
             <div className="flex flex-wrap gap-1.5 pt-0.5">
               {res.links.map((link, idx) => (
                 <button
-                  key={`${link.route}-${idx}`}
+                  key={`${link?.route || 'link'}-${idx}`}
                   type="button"
                   onClick={() => handleLinkClick(link)}
                   className="inline-flex items-center gap-1.5 rounded-control border border-line-strong bg-teal-soft px-2.5 py-1.5 text-[12px] font-medium text-teal transition-colors hover:bg-moss hover:text-pine"
                 >
-                  <span>{link.label}</span>
+                  <span>{link?.label || 'Open'}</span>
                   <ArrowUpRight className="h-3.5 w-3.5 shrink-0" />
                 </button>
               ))}
@@ -196,7 +196,7 @@ export default function AssistantMessageCard({
           )}
 
           {/* Suggested role-appropriate follow-ups */}
-          {res.followups.length > 0 && !message.streaming && (
+          {Array.isArray(res.followups) && res.followups.length > 0 && !message.streaming && (
             <div className="border-t border-line pt-2.5">
               <p className="mb-1.5 text-[11px] font-medium text-ink-faint">Suggested follow-ups</p>
               <div className="flex flex-wrap gap-1.5">
@@ -205,10 +205,10 @@ export default function AssistantMessageCard({
                     key={idx}
                     type="button"
                     disabled={disabled}
-                    onClick={() => onFollowup(q)}
+                    onClick={() => onFollowup(typeof q === 'string' ? q : String(q))}
                     className="rounded-control border border-line bg-mist px-2.5 py-1 text-left text-[12px] text-ink-muted transition-colors hover:border-line-strong hover:bg-moss hover:text-pine disabled:opacity-50"
                   >
-                    {q}
+                    {typeof q === 'string' ? q : String(q)}
                   </button>
                 ))}
               </div>

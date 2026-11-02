@@ -56,7 +56,7 @@ function formatXAxisTick(v: unknown): string {
 }
 
 export function KpiGrid({ kpis }: { kpis: AssistantKpi[] }) {
-  if (!kpis.length) return null;
+  if (!Array.isArray(kpis) || !kpis.length) return null;
 
   return (
     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -100,7 +100,9 @@ export function KpiGrid({ kpis }: { kpis: AssistantKpi[] }) {
 }
 
 function ProgressVisual({ visual }: { visual: ChartVisual }) {
-  const key = visual.series[0]?.key ?? 'value';
+  const series = Array.isArray(visual.series) ? visual.series : [];
+  const data = Array.isArray(visual.data) ? visual.data : [];
+  const key = series[0]?.key ?? 'value';
   return (
     <div className="rounded-control border border-line bg-paper p-3">
       <div className="mb-2.5 flex items-baseline justify-between gap-2">
@@ -108,8 +110,8 @@ function ProgressVisual({ visual }: { visual: ChartVisual }) {
         {visual.unit && <span className="text-[11px] text-ink-faint">{visual.unit}</span>}
       </div>
       <div className="space-y-2.5">
-        {visual.data.slice(0, 6).map((row, idx) => {
-          const label = String(row[visual.x] ?? row.label ?? row.name ?? visual.series[0]?.label ?? 'Progress');
+        {data.slice(0, 6).map((row, idx) => {
+          const label = String(row[visual.x] ?? row.label ?? row.name ?? series[0]?.label ?? 'Progress');
           const rawVal = Number(row[key] ?? row.value ?? 0);
           const pct = Math.max(0, Math.min(100, Number.isFinite(rawVal) ? rawVal : 0));
           return (
@@ -126,7 +128,7 @@ function ProgressVisual({ visual }: { visual: ChartVisual }) {
                   className="h-full transition-all duration-300"
                   style={{
                     width: `${pct}%`,
-                    backgroundColor: visual.series[0]?.color ?? PALETTE[0],
+                    backgroundColor: series[0]?.color ?? PALETTE[0],
                   }}
                 />
               </div>
@@ -305,6 +307,8 @@ function RechartsVisual({ visual }: { visual: ChartVisual }) {
 }
 
 function TableBlock({ visual }: { visual: TableVisual }) {
+  const columns = Array.isArray(visual.columns) ? visual.columns : [];
+  const rows = Array.isArray(visual.rows) ? visual.rows : [];
   return (
     <div className="overflow-hidden rounded-control border border-line bg-paper">
       <div className="border-b border-line bg-mist px-3 py-2">
@@ -314,7 +318,7 @@ function TableBlock({ visual }: { visual: TableVisual }) {
         <table className="w-full border-collapse text-left text-[12px]">
           <thead>
             <tr className="border-b border-line text-[11px] font-medium text-ink-faint">
-              {visual.columns.map((col, idx) => (
+              {columns.map((col, idx) => (
                 <th key={`${col}-${idx}`} className="whitespace-nowrap px-3 py-2 font-medium">
                   {col}
                 </th>
@@ -322,9 +326,9 @@ function TableBlock({ visual }: { visual: TableVisual }) {
             </tr>
           </thead>
           <tbody className="divide-y divide-line">
-            {visual.rows.map((row, rIdx) => (
+            {rows.map((row, rIdx) => (
               <tr key={rIdx} className="hover:bg-moss/40">
-                {row.map((cell, cIdx) => {
+                {Array.isArray(row) && row.map((cell, cIdx) => {
                   const isNumeric = typeof cell === 'number';
                   return (
                     <td

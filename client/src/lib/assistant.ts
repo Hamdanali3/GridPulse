@@ -66,6 +66,11 @@ export interface PublicAssistantResponse {
   refused?: boolean;
 }
 
+export interface StarterPromptItem {
+  label: string;
+  prompt: string;
+}
+
 export interface AssistantBootstrap {
   user_id: number;
   name: string;
@@ -75,6 +80,7 @@ export interface AssistantBootstrap {
   timezone: string;
   welcome: string;
   starters: string[];
+  starter_prompts?: StarterPromptItem[];
 }
 
 export interface ChatTurnHistory {
@@ -167,8 +173,11 @@ export function fallbackBootstrapForUser(user: User): AssistantBootstrap {
 }
 
 export async function fetchAssistantBootstrap(user: User): Promise<AssistantBootstrap> {
+  const fallback = fallbackBootstrapForUser(user);
+  let rawData: Record<string, unknown> | null = null;
+
   try {
-    return await get<AssistantBootstrap>('/assistant/bootstrap');
+    rawData = (await get<Record<string, unknown>>('/assistant/bootstrap')) ?? null;
   } catch {
     if (USE_SUPABASE_RPC) {
       try {
@@ -182,15 +191,56 @@ export async function fetchAssistantBootstrap(user: User): Promise<AssistantBoot
           },
         });
         if (res.ok) {
-          const json = (await res.json()) as { success?: boolean; data?: AssistantBootstrap };
-          if (json?.success && json.data) return json.data;
+          const json = (await res.json()) as { success?: boolean; data?: Record<string, unknown>; body?: Record<string, unknown> };
+          if (json?.success && json.data) rawData = json.data;
+          else if (json?.body) rawData = json.body;
         }
       } catch {
         // Fall through to deterministic role starter pack
       }
     }
-    return fallbackBootstrapForUser(user);
   }
+
+  if (!rawData || typeof rawData !== 'object') {
+    return fallback;
+  }
+
+  // Extract starter prompts from either starter_prompts or starters (support array of objects or strings)
+  const rawList = Array.isArray(rawData.starters)
+    ? rawData.starters
+    : Array.isArray(rawData.starter_prompts)
+    ? rawData.starter_prompts
+    : fallback.starters;
+
+  const starters: string[] = [];
+  const starter_prompts: StarterPromptItem[] = [];
+
+  for (const item of rawList) {
+    if (typeof item === 'string' && item.trim()) {
+      starters.push(item.trim());
+      starter_prompts.push({ label: item.trim(), prompt: item.trim() });
+    } else if (item && typeof item === 'object') {
+      const obj = item as Record<string, unknown>;
+      const prompt = String(obj.prompt ?? obj.label ?? '').trim();
+      const label = String(obj.label ?? obj.prompt ?? '').trim();
+      if (prompt) {
+        starters.push(prompt);
+        starter_prompts.push({ label: label || prompt, prompt });
+      }
+    }
+  }
+
+  return {
+    user_id: typeof rawData.user_id === 'number' ? rawData.user_id : user.id,
+    name: typeof rawData.name === 'string' ? rawData.name : user.name,
+    role: (rawData.role as Role) || user.role,
+    permissions: Array.isArray(rawData.permissions) ? (rawData.permissions as string[]) : [],
+    today: typeof rawData.today === 'string' ? rawData.today : new Date().toISOString().slice(0, 10),
+    timezone: typeof rawData.timezone === 'string' ? rawData.timezone : 'Asia/Karachi',
+    welcome: typeof rawData.welcome === 'string' && rawData.welcome.trim() ? rawData.welcome.trim() : fallback.welcome,
+    starters: starters.length > 0 ? starters : fallback.starters,
+    starter_prompts: starter_prompts.length > 0 ? starter_prompts : fallback.starters.map((s) => ({ label: s, prompt: s })),
+  };
 }
 
 function sessionEndpoint(): { url: string; headers: Record<string, string> } {
@@ -568,7 +618,15 @@ export function loadSessionMessages(userId: number): SessionChatMessage[] {
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed.slice(-30) as SessionChatMessage[];
+    return (parsed.slice(-30) as SessionChatMessage[]).map((m) => {
+      if (m && m.response) {
+        return {
+          ...m,
+          response: normalizeSessionResponse(m.response),
+        };
+      }
+      return m;
+    });
   } catch {
     return [];
   }

@@ -253,7 +253,7 @@ export default function PublicInfoBox({ variant = 'landing' }: Props) {
                 </div>
               )}
 
-              {current.response && current.response.bullets.length > 0 && (
+              {Array.isArray(current.response?.bullets) && current.response.bullets.length > 0 && (
                 <ul className="space-y-1 text-[12.5px] text-ink-muted">
                   {current.response.bullets.map((b, idx) => (
                     <li key={idx} className="flex items-start gap-2">
@@ -264,7 +264,7 @@ export default function PublicInfoBox({ variant = 'landing' }: Props) {
                 </ul>
               )}
 
-              {current.response && current.response.links.length > 0 && (
+              {Array.isArray(current.response?.links) && current.response.links.length > 0 && (
                 <div className="flex flex-wrap gap-2 pt-1">
                   {current.response.links.map((l, idx) => (
                     <button
@@ -280,7 +280,7 @@ export default function PublicInfoBox({ variant = 'landing' }: Props) {
                 </div>
               )}
 
-              {current.response && current.response.followups.length > 0 && !current.streaming && (
+              {Array.isArray(current.response?.followups) && current.response.followups.length > 0 && !current.streaming && (
                 <div className="border-t border-line pt-2.5">
                   <p className="mb-1.5 text-[11px] font-medium text-ink-faint">Follow-up topics</p>
                   <div className="flex flex-wrap gap-1.5">

@@ -66,6 +66,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       // token may already be invalid; local sign-out still proceeds
     }
+    try {
+      for (let i = sessionStorage.length - 1; i >= 0; i--) {
+        const key = sessionStorage.key(i);
+        if (key && key.startsWith('gp_pulsebot_')) {
+          sessionStorage.removeItem(key);
+        }
+      }
+    } catch {
+      // ignore storage errors
+    }
     setToken(null);
     setUserState(null);
     queryClient.clear();

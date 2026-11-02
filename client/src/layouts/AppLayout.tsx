@@ -5,6 +5,7 @@ import { Activity, Bell, ClipboardList, Cpu, FileBarChart, LogOut, MapPinned, Se
 import Logo from '../components/Logo';
 import AppFooter from '../components/AppFooter';
 import UserMenu from '../components/UserMenu';
+import ChatDock from '../components/chat/ChatDock';
 import { useAuth } from '../lib/auth';
 import { get, getPaged } from '../lib/api';
 import type { Alert, FleetLive } from '../lib/types';
@@ -161,6 +162,9 @@ export default function AppLayout() {
         </main>
         <AppFooter lastReadingAt={live.data?.recorded_at} />
       </div>
+
+      {/* Session AI Copilot Dock */}
+      <ChatDock />
 
       {/* Mobile tab bar */}
       <nav className="fixed inset-x-0 bottom-0 z-40 flex justify-around border-t border-line bg-paper px-1 pb-[env(safe-area-inset-bottom,0px)] md:hidden" aria-label="Primary">

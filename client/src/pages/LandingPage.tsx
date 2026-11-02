@@ -1,6 +1,7 @@
 import { useDocumentMeta } from '../lib/hooks';
 import LandingNav from '../components/landing/LandingNav';
 import Hero from '../components/landing/Hero';
+import PublicInfoBox from '../components/chat/PublicInfoBox';
 import About from '../components/landing/About';
 import Features from '../components/landing/Features';
 import HowItWorks from '../components/landing/HowItWorks';
@@ -26,6 +27,7 @@ export default function LandingPage() {
       <LandingNav />
       <main>
         <Hero />
+        <PublicInfoBox variant="landing" />
         <About />
         <Features />
         <HowItWorks />

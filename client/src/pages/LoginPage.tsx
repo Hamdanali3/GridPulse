@@ -8,6 +8,7 @@ import AuthShell from './AuthShell';
 import { useAuth } from '../lib/auth';
 import { errorMessage } from '../lib/api';
 import { ErrorNote, Field } from '../components/ui';
+import PublicInfoBox from '../components/chat/PublicInfoBox';
 
 const schema = z.object({
   email: z.string().email('Enter a valid email address.'),
@@ -71,6 +72,8 @@ export default function LoginPage() {
           ))}
         </div>
       </div>
+
+      <PublicInfoBox variant="compact" />
     </AuthShell>
   );
 }

@@ -153,7 +153,7 @@ const supabaseRpcAdapter: AxiosAdapter = async (config: InternalAxiosRequestConf
   const envelope = (await rpcRes.json()) as SupabaseRpcEnvelope;
   const status = envelope?.status ?? 200;
 
-  let data: unknown = envelope?.body ?? null;
+  let data: unknown = envelope?.body !== undefined ? envelope.body : envelope;
   if (envelope?.is_csv) {
     const csvText = envelope.csv ?? '';
     data = config.responseType === 'blob' ? new Blob([csvText], { type: 'text/csv;charset=utf-8' }) : csvText;

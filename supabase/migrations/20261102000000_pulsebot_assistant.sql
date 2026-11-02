@@ -913,7 +913,7 @@ BEGIN
                 'timezone', 'Asia/Karachi'
             ),
             'applied_filters', jsonb_build_object(
-                'technologies', CASE WHEN v_techs IS NULL THEN 'all'::jsonb ELSE to_jsonb(v_techs) END,
+                'technologies', CASE WHEN v_techs IS NULL THEN to_jsonb('all'::text) ELSE to_jsonb(v_techs) END,
                 'site_id', v_site_id,
                 'assignee_id', v_assignee_id,
                 'scoped_to_self', (v_role = 'engineer' AND v_assignee_id = v_user_id AND v_scope <> 'all')
@@ -1284,8 +1284,8 @@ REVOKE ALL ON TABLE public.assistant_config FROM anon, authenticated;
 INSERT INTO public.assistant_config (key, value)
 VALUES 
     ('groq_api_key', ''),
-    ('groq_model', 'qwen/qwen3.8-27b')
-ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
+    ('groq_model', 'openai/gpt-oss-120b')
+ON CONFLICT (key) DO NOTHING;
 
 CREATE OR REPLACE FUNCTION public.gp_assistant_chat(
     p_token text,
@@ -1321,11 +1321,17 @@ DECLARE
     v_tool_args jsonb;
     v_tool_out jsonb;
     v_tools_used jsonb := '[]'::jsonb;
-    v_tool_rounds int := 0;
+    v_round int := 0;
+    v_done boolean := false;
     v_content text;
     v_final jsonb;
     v_latency int;
+    v_kpis jsonb := '[]'::jsonb;
+    v_links jsonb := '[]'::jsonb;
+    v_key text;
+    v_val jsonb;
 BEGIN
+    -- 1. Resolve User & Role
     v_ctx := public.gp_assistant_resolve_user(p_token);
     IF NOT COALESCE((v_ctx->>'authenticated')::boolean, false) THEN
         RETURN jsonb_build_object('success', false, 'error', jsonb_build_object('code', 'UNAUTHENTICATED', 'message', 'Sign in to use PulseBot.'));
@@ -1337,202 +1343,285 @@ BEGIN
     v_today := COALESCE(v_ctx->>'today', TO_CHAR(NOW() AT TIME ZONE 'Asia/Karachi', 'YYYY-MM-DD'));
     v_tz := COALESCE(v_ctx->>'timezone', 'Asia/Karachi');
 
+    -- 2. Rate limit (25 req per 5 min)
     v_rl := public.gp_assistant_check_rate_limit('user', v_user_id::text, 25, 300);
     IF NOT COALESCE((v_rl->>'allowed')::boolean, true) THEN
-        RETURN jsonb_build_object('success', false, 'error', jsonb_build_object('code', 'RATE_LIMITED', 'message', 'Too many questions right now. Please wait a few seconds and try again.'));
+        RETURN jsonb_build_object('success', false, 'error', jsonb_build_object('code', 'RATE_LIMITED', 'message', 'Rate limit exceeded. Please wait a moment.'));
     END IF;
 
+    -- 3. Retrieve Groq Config
     SELECT value INTO v_groq_key FROM public.assistant_config WHERE key = 'groq_api_key';
     SELECT value INTO v_groq_model FROM public.assistant_config WHERE key = 'groq_model';
     IF v_groq_key IS NULL OR v_groq_key = '' THEN
         v_groq_key := current_setting('app.settings.groq_api_key', true);
     END IF;
     IF v_groq_model IS NULL OR v_groq_model = '' THEN
-        v_groq_model := 'qwen/qwen3.8-27b';
+        v_groq_model := 'openai/gpt-oss-120b';
     END IF;
 
-    v_sys_prompt := 'You are PulseBot, the visual AI copilot for GridPulse (Chitral renewable-operations platform in Khyber Pakhtunkhwa, Pakistan).' || E'\n' ||
-        'Today is ' || v_today || ' (' || v_tz || ').' || E'\n' ||
-        'Current User: ' || v_user_name || ' (Role: ' || UPPER(v_role) || ').' || E'\n' ||
-        'STRICT ROLE ADAPTATION:' || E'\n' ||
-        CASE v_role
-            WHEN 'admin' THEN 'Role: ADMIN (Operations Chief-of-Staff). Fleet-wide visibility: production, alerts, engineer workloads, overdue items, team, audit trail.'
-            WHEN 'engineer' THEN 'Role: ENGINEER (Field-Ops Co-Pilot). Focus on assigned work orders, active alerts, plant health, troubleshooting. DO NOT query audit logs or team roles.'
-            ELSE 'Role: VIEWER (Plain-language Reporter). Read-only summaries of generation, availability, energy trends, and renewable concepts. DO NOT query audit logs, workloads, or team roles.'
-        END || E'\n\n' ||
-        'OUTPUT FORMAT RULES:' || E'\n' ||
-        'Reply with ONLY valid JSON containing:' || E'\n' ||
-        '1. summary: String (concise summary with numbers).' || E'\n' ||
-        '2. kpis: Array of { label: string, value: string|number, unit?: string, delta?: string, trend?: "up"|"down"|"flat"|"neutral" } (1 to 4).' || E'\n' ||
-        '3. visuals: Array of visual objects for Recharts:' || E'\n' ||
-        '   - Bar chart: { type: "bar", title: string, x: string, series: [{ key: string, label: string }], data: [{ ... }] }' || E'\n' ||
-        '   - Line chart: { type: "line", title: string, x: string, series: [{ key: string, label: string }], data: [{ ... }] }' || E'\n' ||
-        '   - Table: { type: "table", caption: string, columns: [string], rows: [[string|number]] }' || E'\n' ||
-        '4. insights: Array of 1-3 bullet points.' || E'\n' ||
-        '5. links: Array of { label: string, route: string, query?: Record<string, string> } (e.g. route: "/sites", "/alerts", "/work-orders", "/reports", "/team", "/audit").' || E'\n' ||
-        '6. followups: Array of 2-3 logical next-step strings.' || E'\n\n' ||
-        'CRITICAL INVARIANT: READ-ONLY. Never mutate data.';
+    -- 4. Build System Prompt & Messages
+    v_sys_prompt := 'You are PulseBot, the visual AI operations copilot for GridPulse Chitral renewable grid (hydro, solar, wind in Khyber Pakhtunkhwa, Pakistan). '
+        || 'Today is ' || v_today || ' (' || v_tz || '). '
+        || 'Authenticated User: ' || v_user_name || ', Role: ' || v_role || '. '
+        || 'Role rules: '
+        || CASE v_role
+            WHEN 'admin' THEN 'Fleet-wide visibility: production, alerts, work orders across all engineers, team, and audit trail.'
+            WHEN 'engineer' THEN 'Focus on assigned tasks and actionable field operational advice. Never fabricate edits/writes.'
+            ELSE 'Read-only operational reporting. Explain terms (capacity factor, availability, efficiency) clearly.'
+           END
+        || ' Always ground your answer in tool output. '
+        || 'When answering, output a single JSON object with keys: '
+        || 'summary (string, concise 1-3 sentences with key numbers), '
+        || 'kpis (array of objects: {label, value, unit?, delta?, trend?}), '
+        || 'visuals (array of objects: {type: bar|line|area|pie|table, title, data: [...], series: [{key, label}], x: string}), '
+        || 'insights (array of strings), '
+        || 'links (array of objects: {label, route: /sites|/work-orders|/alerts|/reports|/team|/audit}), '
+        || 'followups (array of strings: 2-3 suggested next questions). '
+        || 'Never wrap in markdown backticks or commentary outside JSON.';
 
-    v_messages := jsonb_build_array(jsonb_build_object('role', 'system', 'content', v_sys_prompt));
+    v_messages := jsonb_build_array(
+        jsonb_build_object('role', 'system', 'content', v_sys_prompt)
+    );
+
     IF p_history IS NOT NULL AND jsonb_typeof(p_history) = 'array' THEN
         FOR v_hist_item IN SELECT * FROM jsonb_array_elements(p_history) LOOP
             IF v_hist_item->>'role' IN ('user', 'assistant') AND NULLIF(v_hist_item->>'content', '') IS NOT NULL THEN
                 v_messages := v_messages || jsonb_build_array(jsonb_build_object(
                     'role', v_hist_item->>'role',
-                    'content', v_hist_item->>'content'
+                    'content', LEFT(v_hist_item->>'content', 1000)
                 ));
             END IF;
         END LOOP;
     END IF;
-    v_messages := v_messages || jsonb_build_array(jsonb_build_object('role', 'user', 'content', p_message));
 
+    v_messages := v_messages || jsonb_build_array(
+        jsonb_build_object('role', 'user', 'content', p_message)
+    );
+
+    -- 5. Tool schemas catalog
     v_tools := jsonb_build_array(
-        jsonb_build_object('type', 'function', 'function', jsonb_build_object('name', 'fleet_overview', 'description', 'Current output, capacity factor, availability, site status counts', 'parameters', jsonb_build_object('type', 'object', 'properties', '{}'::jsonb))),
-        jsonb_build_object('type', 'function', 'function', jsonb_build_object('name', 'site_summary', 'description', 'Site detail, per-technology generation/efficiency, asset health', 'parameters', jsonb_build_object('type', 'object', 'properties', jsonb_build_object('site_id_or_name', jsonb_build_object('type', 'string'))))),
-        jsonb_build_object('type', 'function', 'function', jsonb_build_object('name', 'list_sites', 'description', 'Lookup sites by technology or status', 'parameters', jsonb_build_object('type', 'object', 'properties', jsonb_build_object('technology', jsonb_build_object('type', 'string'), 'status', jsonb_build_object('type', 'string'))))),
-        jsonb_build_object('type', 'function', 'function', jsonb_build_object('name', 'alerts_summary', 'description', 'Open alerts count by severity and status', 'parameters', jsonb_build_object('type', 'object', 'properties', jsonb_build_object('severity', jsonb_build_object('type', 'string'))))),
-        jsonb_build_object('type', 'function', 'function', jsonb_build_object('name', 'list_alerts', 'description', 'List recent alerts', 'parameters', jsonb_build_object('type', 'object', 'properties', jsonb_build_object('severity', jsonb_build_object('type', 'string'))))),
-        jsonb_build_object('type', 'function', 'function', jsonb_build_object('name', 'work_orders_summary', 'description', 'Counts by status, priority, assignee', 'parameters', jsonb_build_object('type', 'object', 'properties', jsonb_build_object('assignee_id', jsonb_build_object('type', 'integer'))))),
-        jsonb_build_object('type', 'function', 'function', jsonb_build_object('name', 'work_orders_list', 'description', 'List open and recent work orders', 'parameters', jsonb_build_object('type', 'object', 'properties', jsonb_build_object('status', jsonb_build_object('type', 'string'))))),
-        jsonb_build_object('type', 'function', 'function', jsonb_build_object('name', 'engineer_workload', 'description', 'Assigned vs done vs in-progress vs overdue', 'parameters', jsonb_build_object('type', 'object', 'properties', jsonb_build_object('assignee_id', jsonb_build_object('type', 'integer'))))),
-        jsonb_build_object('type', 'function', 'function', jsonb_build_object('name', 'energy_report', 'description', 'Energy by site/technology/day', 'parameters', jsonb_build_object('type', 'object', 'properties', jsonb_build_object('range', jsonb_build_object('type', 'string'), 'group_by', jsonb_build_object('type', 'string')))))
+        jsonb_build_object('type', 'function', 'function', jsonb_build_object('name', 'fleet_overview', 'description', 'Fleet current output, capacity factor, availability, site status counts', 'parameters', jsonb_build_object('type', 'object', 'properties', '{}'::jsonb))),
+        jsonb_build_object('type', 'function', 'function', jsonb_build_object('name', 'site_summary', 'description', 'Site operational metrics and asset health', 'parameters', jsonb_build_object('type', 'object', 'properties', jsonb_build_object('site_id', jsonb_build_object('type', 'integer'), 'name', jsonb_build_object('type', 'string'))))),
+        jsonb_build_object('type', 'function', 'function', jsonb_build_object('name', 'list_sites', 'description', 'Lookup sites by status or technology', 'parameters', jsonb_build_object('type', 'object', 'properties', jsonb_build_object('technology', jsonb_build_object('type', 'string'), 'status', jsonb_build_object('type', 'string'))))),
+        jsonb_build_object('type', 'function', 'function', jsonb_build_object('name', 'list_assets', 'description', 'Lookup assets', 'parameters', jsonb_build_object('type', 'object', 'properties', jsonb_build_object('site_id', jsonb_build_object('type', 'integer'), 'status', jsonb_build_object('type', 'string'))))),
+        jsonb_build_object('type', 'function', 'function', jsonb_build_object('name', 'generation_timeseries', 'description', 'Timeseries generation data by site or tech', 'parameters', jsonb_build_object('type', 'object', 'properties', jsonb_build_object('range', jsonb_build_object('type', 'string'), 'scope', jsonb_build_object('type', 'string'))))),
+        jsonb_build_object('type', 'function', 'function', jsonb_build_object('name', 'alerts_summary', 'description', 'Alert counts by severity and status', 'parameters', jsonb_build_object('type', 'object', 'properties', jsonb_build_object('status', jsonb_build_object('type', 'string'))))),
+        jsonb_build_object('type', 'function', 'function', jsonb_build_object('name', 'list_alerts', 'description', 'List recent alerts', 'parameters', jsonb_build_object('type', 'object', 'properties', jsonb_build_object('severity', jsonb_build_object('type', 'string'), 'limit', jsonb_build_object('type', 'integer'))))),
+        jsonb_build_object('type', 'function', 'function', jsonb_build_object('name', 'work_orders_summary', 'description', 'Work orders breakdown by status and priority', 'parameters', jsonb_build_object('type', 'object', 'properties', jsonb_build_object('scope', jsonb_build_object('type', 'string'))))),
+        jsonb_build_object('type', 'function', 'function', jsonb_build_object('name', 'work_orders_list', 'description', 'List work orders', 'parameters', jsonb_build_object('type', 'object', 'properties', jsonb_build_object('status', jsonb_build_object('type', 'string'), 'priority', jsonb_build_object('type', 'string'), 'limit', jsonb_build_object('type', 'integer'))))),
+        jsonb_build_object('type', 'function', 'function', jsonb_build_object('name', 'energy_report', 'description', 'Energy generation breakdown', 'parameters', jsonb_build_object('type', 'object', 'properties', jsonb_build_object('range', jsonb_build_object('type', 'string'), 'group_by', jsonb_build_object('type', 'string'))))),
+        jsonb_build_object('type', 'function', 'function', jsonb_build_object('name', 'project_knowledge', 'description', 'Chitral grid project knowledge', 'parameters', jsonb_build_object('type', 'object', 'properties', jsonb_build_object('query', jsonb_build_object('type', 'string')))))
     );
 
-    v_req_body := jsonb_build_object(
-        'model', v_groq_model,
-        'messages', v_messages,
-        'tools', v_tools,
-        'tool_choice', 'auto',
-        'max_tokens', 500
-    );
+    -- 6. Interactive Multi-Round Loop (up to 3 rounds)
+    WHILE v_round < 3 AND NOT v_done LOOP
+        v_round := v_round + 1;
+        v_req_body := jsonb_build_object(
+            'model', v_groq_model,
+            'messages', v_messages,
+            'tools', v_tools,
+            'tool_choice', 'auto',
+            'max_tokens', CASE WHEN v_round = 1 THEN 300 ELSE 1000 END
+        );
 
-    SELECT status, content INTO v_res
-    FROM extensions.http((
-        'POST',
-        'https://api.groq.com/openai/v1/chat/completions',
-        ARRAY[
-            extensions.http_header('Authorization', 'Bearer ' || v_groq_key)
-        ],
-        'application/json',
-        v_req_body::text
-    )::extensions.http_request);
-
-    v_status := v_res.status;
-
-    IF v_status = 429 THEN
-        v_groq_model := 'openai/gpt-oss-120b';
-        v_req_body := jsonb_set(v_req_body, '{model}', to_jsonb(v_groq_model));
         SELECT status, content INTO v_res
         FROM extensions.http((
             'POST',
             'https://api.groq.com/openai/v1/chat/completions',
-            ARRAY[
-                extensions.http_header('Authorization', 'Bearer ' || v_groq_key)
-            ],
+            ARRAY[extensions.http_header('Authorization', 'Bearer ' || v_groq_key)],
             'application/json',
             v_req_body::text
         )::extensions.http_request);
+
         v_status := v_res.status;
-    END IF;
 
-    IF v_status <> 200 THEN
-        RETURN jsonb_build_object('success', false, 'status', v_status, 'error', jsonb_build_object('code', 'GROQ_ERROR', 'message', 'PulseBot intelligence service temporarily unavailable (' || v_status::text || ').'));
-    END IF;
+        -- Fallback on 429
+        IF v_status = 429 THEN
+            v_groq_model := 'openai/gpt-oss-20b';
+            v_req_body := jsonb_set(v_req_body, '{model}', to_jsonb(v_groq_model));
+            SELECT status, content INTO v_res
+            FROM extensions.http((
+                'POST',
+                'https://api.groq.com/openai/v1/chat/completions',
+                ARRAY[extensions.http_header('Authorization', 'Bearer ' || v_groq_key)],
+                'application/json',
+                v_req_body::text
+            )::extensions.http_request);
+            v_status := v_res.status;
+        END IF;
 
-    BEGIN
-        v_groq_res := v_res.content::jsonb;
-    EXCEPTION WHEN OTHERS THEN
-        RETURN jsonb_build_object('success', false, 'status', 500, 'error', jsonb_build_object('code', 'GROQ_ERROR', 'message', 'Invalid JSON from Groq'));
-    END;
+        IF v_status <> 200 THEN
+            RETURN jsonb_build_object('success', false, 'status', v_status, 'error', jsonb_build_object('code', 'GROQ_ERROR', 'message', 'PulseBot intelligence service temporarily unavailable (' || v_status::text || ').'));
+        END IF;
 
-    v_choice := v_groq_res->'choices'->0;
-    v_tool_calls := v_choice->'message'->'tool_calls';
+        BEGIN
+            v_groq_res := v_res.content::jsonb;
+        EXCEPTION WHEN OTHERS THEN
+            RETURN jsonb_build_object('success', false, 'status', 500, 'error', jsonb_build_object('code', 'GROQ_ERROR', 'message', 'Invalid JSON from Groq'));
+        END;
 
-    IF v_tool_calls IS NOT NULL AND jsonb_typeof(v_tool_calls) = 'array' AND jsonb_array_length(v_tool_calls) > 0 THEN
-        v_messages := v_messages || jsonb_build_array(v_choice->'message');
-        v_tool_rounds := 1;
+        v_choice := v_groq_res->'choices'->0;
+        v_tool_calls := v_choice->'message'->'tool_calls';
 
-        FOR v_tc IN SELECT * FROM jsonb_array_elements(v_tool_calls) LOOP
-            v_tool_name := v_tc->'function'->>'name';
-            BEGIN
-                v_tool_args := (v_tc->'function'->>'arguments')::jsonb;
-            EXCEPTION WHEN OTHERS THEN
-                v_tool_args := '{}'::jsonb;
-            END;
+        IF v_tool_calls IS NOT NULL AND jsonb_typeof(v_tool_calls) = 'array' AND jsonb_array_length(v_tool_calls) > 0 THEN
+            v_messages := v_messages || jsonb_build_array(v_choice->'message');
 
-            v_tools_used := v_tools_used || jsonb_build_array(v_tool_name);
-            v_tool_out := public.gp_assistant_exec_tool(p_token, v_tool_name, v_tool_args);
+            FOR v_tc IN SELECT * FROM jsonb_array_elements(v_tool_calls) LOOP
+                v_tool_name := v_tc->'function'->>'name';
+                BEGIN
+                    v_tool_args := (v_tc->'function'->>'arguments')::jsonb;
+                EXCEPTION WHEN OTHERS THEN
+                    v_tool_args := '{}'::jsonb;
+                END;
 
-            v_messages := v_messages || jsonb_build_array(jsonb_build_object(
-                'role', 'tool',
-                'tool_call_id', v_tc->>'id',
-                'name', v_tool_name,
-                'content', v_tool_out::text
-            ));
-        END LOOP;
+                v_tools_used := v_tools_used || jsonb_build_array(v_tool_name);
+                v_tool_out := public.gp_assistant_exec_tool(p_token, v_tool_name, v_tool_args);
+
+                v_messages := v_messages || jsonb_build_array(jsonb_build_object(
+                    'role', 'tool',
+                    'tool_call_id', v_tc->>'id',
+                    'name', v_tool_name,
+                    'content', v_tool_out::text
+                ));
+            END LOOP;
+        ELSE
+            v_done := true;
+            v_content := v_choice->'message'->>'content';
+        END IF;
+    END LOOP;
+
+    -- 7. Synthesis fallback if loop hit max rounds without stopping
+    IF NOT v_done THEN
+        v_messages := v_messages || jsonb_build_array(jsonb_build_object(
+            'role', 'user',
+            'content', 'All operational tool queries are complete. Output your final operational answer now as a single valid JSON object with keys: summary, kpis, visuals, insights, links, followups.'
+        ));
 
         v_req_body := jsonb_build_object(
             'model', v_groq_model,
             'messages', v_messages,
-            'response_format', jsonb_build_object('type', 'json_object'),
-            'max_tokens', 650
+            'max_tokens', 1000
         );
 
         SELECT status, content INTO v_res
         FROM extensions.http((
             'POST',
             'https://api.groq.com/openai/v1/chat/completions',
-            ARRAY[
-                extensions.http_header('Authorization', 'Bearer ' || v_groq_key)
-            ],
+            ARRAY[extensions.http_header('Authorization', 'Bearer ' || v_groq_key)],
             'application/json',
             v_req_body::text
         )::extensions.http_request);
 
-        IF v_res.status <> 200 THEN
-            RETURN jsonb_build_object('success', false, 'status', v_res.status, 'error', jsonb_build_object('code', 'GROQ_ERROR', 'message', 'PulseBot synthesis temporarily unavailable (' || v_res.status::text || ').'));
+        IF v_res.status = 200 THEN
+            v_groq_res := v_res.content::jsonb;
+            v_choice := v_groq_res->'choices'->0;
+            v_content := v_choice->'message'->>'content';
         END IF;
-
-        v_groq_res := v_res.content::jsonb;
-        v_choice := v_groq_res->'choices'->0;
     END IF;
 
-    v_content := v_choice->'message'->>'content';
+    -- 8. Strip markdown code fences if present
+    v_content := TRIM(COALESCE(v_content, ''));
+    IF v_content ILIKE '```json%' THEN
+        v_content := SUBSTRING(v_content FROM 8);
+        IF v_content LIKE '%```' THEN
+            v_content := SUBSTRING(v_content FROM 1 FOR LENGTH(v_content) - 3);
+        END IF;
+    ELSIF v_content ILIKE '```%' THEN
+        v_content := SUBSTRING(v_content FROM 4);
+        IF v_content LIKE '%```' THEN
+            v_content := SUBSTRING(v_content FROM 1 FOR LENGTH(v_content) - 3);
+        END IF;
+    END IF;
+    v_content := TRIM(v_content);
+
     BEGIN
         v_final := v_content::jsonb;
     EXCEPTION WHEN OTHERS THEN
-        v_final := jsonb_build_object(
-            'summary', COALESCE(v_content, 'PulseBot processed your operational request.'),
-            'kpis', '[]'::jsonb,
-            'visuals', '[]'::jsonb,
-            'insights', '[]'::jsonb,
-            'links', jsonb_build_array(jsonb_build_object('label', 'Sites Overview', 'route', '/sites')),
-            'followups', jsonb_build_array('What is the fleet status today?', 'Show open critical alerts')
-        );
+        DECLARE
+            v_match text[];
+        BEGIN
+            v_match := regexp_match(v_content, '"summary"\s*:\s*"([^"\\]*(?:\\.[^"\\]*)*)"');
+            IF v_match IS NOT NULL AND v_match[1] IS NOT NULL THEN
+                v_final := jsonb_build_object('summary', v_match[1]);
+            ELSE
+                v_final := jsonb_build_object('summary', COALESCE(NULLIF(v_content, ''), 'PulseBot processed your operational request.'));
+            END IF;
+        END;
     END;
 
-    IF v_final->'summary' IS NULL THEN
-        v_final := jsonb_set(v_final, '{summary}', to_jsonb('Operations summary for GridPulse.'::text));
+    -- 9. Normalization of response schema
+    IF v_final->'summary' IS NULL OR jsonb_typeof(v_final->'summary') <> 'string' THEN
+        v_final := jsonb_set(v_final, '{summary}', to_jsonb('Operational analysis for GridPulse Chitral.'::text));
     END IF;
-    IF v_final->'kpis' IS NULL OR jsonb_typeof(v_final->'kpis') <> 'array' THEN
+
+    -- Normalize KPIs (if object, convert to array of {label, value})
+    IF jsonb_typeof(v_final->'kpis') = 'object' THEN
+        v_kpis := '[]'::jsonb;
+        FOR v_key, v_val IN SELECT * FROM jsonb_each(v_final->'kpis') LOOP
+            v_kpis := v_kpis || jsonb_build_array(jsonb_build_object(
+                'label', REPLACE(INITCAP(REPLACE(v_key, '_', ' ')), 'Mw', 'MW'),
+                'value', v_val
+            ));
+        END LOOP;
+        v_final := jsonb_set(v_final, '{kpis}', v_kpis);
+    ELSIF v_final->'kpis' IS NULL OR jsonb_typeof(v_final->'kpis') <> 'array' THEN
         v_final := jsonb_set(v_final, '{kpis}', '[]'::jsonb);
     END IF;
-    IF v_final->'visuals' IS NULL OR jsonb_typeof(v_final->'visuals') <> 'array' THEN
+
+    -- Normalize Visuals
+    IF jsonb_typeof(v_final->'visuals') = 'object' THEN
+        v_final := jsonb_set(v_final, '{visuals}', jsonb_build_array(v_final->'visuals'));
+    ELSIF v_final->'visuals' IS NULL OR jsonb_typeof(v_final->'visuals') <> 'array' THEN
         v_final := jsonb_set(v_final, '{visuals}', '[]'::jsonb);
     END IF;
-    IF v_final->'insights' IS NULL OR jsonb_typeof(v_final->'insights') <> 'array' THEN
+
+    -- Normalize Insights
+    IF jsonb_typeof(v_final->'insights') = 'string' THEN
+        v_final := jsonb_set(v_final, '{insights}', jsonb_build_array(v_final->'insights'));
+    ELSIF v_final->'insights' IS NULL OR jsonb_typeof(v_final->'insights') <> 'array' THEN
         v_final := jsonb_set(v_final, '{insights}', '[]'::jsonb);
     END IF;
-    IF v_final->'links' IS NULL OR jsonb_typeof(v_final->'links') <> 'array' THEN
-        v_final := jsonb_set(v_final, '{links}', '[]'::jsonb);
+
+    -- Normalize Links (if object, convert to array of {label, route})
+    IF jsonb_typeof(v_final->'links') = 'object' THEN
+        v_links := '[]'::jsonb;
+        FOR v_key, v_val IN SELECT * FROM jsonb_each(v_final->'links') LOOP
+            v_links := v_links || jsonb_build_array(jsonb_build_object(
+                'label', INITCAP(REPLACE(v_key, '_', ' ')),
+                'route', CASE
+                    WHEN v_val::text ILIKE '%site%' THEN '/sites'
+                    WHEN v_val::text ILIKE '%order%' THEN '/work-orders'
+                    WHEN v_val::text ILIKE '%alert%' THEN '/alerts'
+                    WHEN v_val::text ILIKE '%report%' THEN '/reports'
+                    WHEN v_val::text ILIKE '%team%' THEN '/team'
+                    WHEN v_val::text ILIKE '%audit%' THEN '/audit'
+                    ELSE '/sites'
+                END
+            ));
+        END LOOP;
+        v_final := jsonb_set(v_final, '{links}', v_links);
+    ELSIF v_final->'links' IS NULL OR jsonb_typeof(v_final->'links') <> 'array' OR jsonb_array_length(v_final->'links') = 0 THEN
+        v_final := jsonb_set(v_final, '{links}', jsonb_build_array(
+            jsonb_build_object('label', 'Sites Overview', 'route', '/sites'),
+            jsonb_build_object('label', 'Work Orders', 'route', '/work-orders')
+        ));
     END IF;
-    IF v_final->'followups' IS NULL OR jsonb_typeof(v_final->'followups') <> 'array' THEN
-        v_final := jsonb_set(v_final, '{followups}', '[]'::jsonb);
+
+    -- Normalize Followups
+    IF jsonb_typeof(v_final->'followups') = 'string' THEN
+        v_final := jsonb_set(v_final, '{followups}', jsonb_build_array(v_final->'followups'));
+    ELSIF v_final->'followups' IS NULL OR jsonb_typeof(v_final->'followups') <> 'array' OR jsonb_array_length(v_final->'followups') = 0 THEN
+        v_final := jsonb_set(v_final, '{followups}', jsonb_build_array(
+            'What is the fleet status today?',
+            'Show open critical alerts',
+            'List overdue work orders'
+        ));
     END IF;
 
     v_latency := ROUND(EXTRACT(MILLISECONDS FROM (clock_timestamp() - v_start)))::int;
 
-    PERFORM public.gp_assistant_write_log(v_user_id, v_role, 'session', v_tools_used, v_tool_rounds::smallint, v_latency, 'ok', NULL, NULL);
+    -- 10. Audit Log
+    PERFORM public.gp_assistant_write_log(v_user_id, v_role, 'session', v_tools_used, v_round::smallint, v_latency, 'ok', NULL, NULL);
 
     RETURN jsonb_build_object(
         'success', true,
@@ -1738,12 +1827,18 @@ BEGIN
 
     -- Assistant session chat (in-app role-aware visual copilot)
     IF v_method = 'POST' AND v_path = '/assistant/chat' THEN
-        RETURN public.gp_assistant_chat(p_token, p_body->>'message', COALESCE(p_body->'history', '[]'::jsonb));
+        RETURN jsonb_build_object(
+            'status', 200,
+            'body', public.gp_assistant_chat(p_token, p_body->>'message', COALESCE(p_body->'history', '[]'::jsonb))
+        );
     END IF;
 
     -- Assistant public FAQ info box (landing and login page)
     IF v_method = 'POST' AND v_path = '/assistant/public' THEN
-        RETURN public.gp_assistant_public(p_body->>'message', COALESCE(p_body->'history', '[]'::jsonb), p_ip);
+        RETURN jsonb_build_object(
+            'status', 200,
+            'body', public.gp_assistant_public(p_body->>'message', COALESCE(p_body->'history', '[]'::jsonb), p_ip)
+        );
     END IF;
 
     -- Admin-only assistant telemetry/audit logs

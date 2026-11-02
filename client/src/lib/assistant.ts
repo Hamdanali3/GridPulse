@@ -367,6 +367,121 @@ async function consumeAssistantStream<T>(
   return finalResult;
 }
 
+function normalizeSessionResponse(raw: unknown): SessionAssistantResponse {
+  if (!raw || typeof raw !== 'object') {
+    return {
+      summary: typeof raw === 'string' ? raw : 'Operational analysis for GridPulse Chitral.',
+      kpis: [],
+      visuals: [],
+      insights: [],
+      links: [{ label: 'Sites Overview', route: '/sites' }],
+      followups: ['What is the fleet status today?', 'Show open critical alerts'],
+    };
+  }
+
+  const r = raw as Record<string, unknown>;
+  const summary = String(r.summary ?? 'PulseBot processed your operational request.');
+
+  let kpis: AssistantKpi[] = [];
+  if (Array.isArray(r.kpis)) {
+    kpis = r.kpis.filter((k): k is AssistantKpi => Boolean(k && typeof k === 'object'));
+  } else if (r.kpis && typeof r.kpis === 'object') {
+    kpis = Object.entries(r.kpis as Record<string, unknown>).map(([k, v]) => ({
+      label: k.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
+      value: typeof v === 'number' || typeof v === 'string' ? v : String(v ?? ''),
+    }));
+  }
+
+  let visuals: AssistantVisual[] = [];
+  if (Array.isArray(r.visuals)) {
+    visuals = r.visuals.filter((v): v is AssistantVisual => Boolean(v && typeof v === 'object'));
+  } else if (r.visuals && typeof r.visuals === 'object') {
+    visuals = [r.visuals as AssistantVisual];
+  }
+
+  let insights: string[] = [];
+  if (Array.isArray(r.insights)) {
+    insights = r.insights.map(String);
+  } else if (typeof r.insights === 'string' && r.insights.trim()) {
+    insights = [r.insights.trim()];
+  }
+
+  let links: DeepLink[] = [];
+  if (Array.isArray(r.links)) {
+    links = r.links
+      .filter((l): l is Record<string, unknown> => Boolean(l && typeof l === 'object'))
+      .map((l) => ({
+        label: String(l.label ?? 'Open Page'),
+        route: String(l.route ?? '/sites'),
+        query: l.query && typeof l.query === 'object' ? (l.query as Record<string, string>) : undefined,
+      }));
+  } else if (r.links && typeof r.links === 'object') {
+    links = Object.entries(r.links as Record<string, unknown>).map(([k, v]) => ({
+      label: k.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
+      route: String(v || '/sites'),
+    }));
+  }
+  if (links.length === 0) {
+    links = [{ label: 'Sites Overview', route: '/sites' }];
+  }
+
+  let followups: string[] = [];
+  if (Array.isArray(r.followups)) {
+    followups = r.followups.map(String);
+  } else if (typeof r.followups === 'string' && r.followups.trim()) {
+    followups = [r.followups.trim()];
+  }
+  if (followups.length === 0) {
+    followups = ['What is the fleet status today?', 'Show open critical alerts'];
+  }
+
+  return {
+    summary,
+    kpis,
+    visuals,
+    insights,
+    links,
+    followups,
+    confidence_notes: typeof r.confidence_notes === 'string' ? r.confidence_notes : undefined,
+  };
+}
+
+function normalizePublicResponse(raw: unknown): PublicAssistantResponse {
+  if (!raw || typeof raw !== 'object') {
+    return {
+      summary: typeof raw === 'string' ? raw : 'GridPulse is the renewable-operations platform for Chitral.',
+      bullets: ['Monitors 11 hydro, solar, and wind plants in Khyber Pakhtunkhwa.', 'Sign in to access live telemetry.'],
+      links: [{ label: 'Sign In to Demo', route: '/login' }],
+      followups: ['What are the demo login credentials?', 'How do alerts turn into work orders?'],
+    };
+  }
+
+  const r = raw as Record<string, unknown>;
+  const summary = String(r.summary ?? 'GridPulse Chitral renewable grid overview.');
+  const bullets = Array.isArray(r.bullets) ? r.bullets.map(String) : [];
+  let links: DeepLink[] = [];
+  if (Array.isArray(r.links)) {
+    links = r.links
+      .filter((l): l is Record<string, unknown> => Boolean(l && typeof l === 'object'))
+      .map((l) => ({
+        label: String(l.label ?? 'Sign In'),
+        route: String(l.route ?? '/login'),
+      }));
+  }
+  if (links.length === 0) {
+    links = [{ label: 'Sign In to Demo', route: '/login' }];
+  }
+  const followups = Array.isArray(r.followups) ? r.followups.map(String) : [];
+
+  return {
+    summary,
+    bullets,
+    links,
+    followups,
+    refused: Boolean(r.refused),
+  };
+}
+
 export async function streamSessionChat(params: {
   message: string;
   history: ChatTurnHistory[];
@@ -386,7 +501,7 @@ export async function streamSessionChat(params: {
       history: params.history,
     });
     return {
-      response: envelope.data,
+      response: normalizeSessionResponse(envelope.data),
       toolsUsed: envelope.meta?.tools_used ?? [],
       latencyMs: envelope.meta?.latency_ms,
     };
@@ -423,7 +538,7 @@ export async function streamPublicChat(params: {
       },
     );
     return {
-      response: envelope.data,
+      response: normalizePublicResponse(envelope.data),
       latencyMs: envelope.meta?.latency_ms,
     };
   }

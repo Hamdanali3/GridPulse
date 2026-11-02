@@ -1,5 +1,5 @@
-# GridPulse API image built from the REPO ROOT (Railway with Root Directory left at "/").
-# Same image as api/Dockerfile, only the COPY paths differ. Prefer Root Directory = api.
+# GridPulse API image built from the REPO ROOT.
+# Same image as api/Dockerfile, only the COPY paths differ.
 FROM composer:2 AS vendor
 WORKDIR /app
 COPY api/composer.json api/composer.lock ./

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AlertController;
 use App\Http\Controllers\AssetController;
+use App\Http\Controllers\AssistantController;
 use App\Http\Controllers\AuditController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
@@ -23,6 +24,10 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
     Route::get('/health', HealthController::class);
+
+    // Public Homepage Info Box (no auth, zero operational database tools)
+    Route::get('/assistant/public', [AssistantController::class, 'publicInfo']);
+    Route::post('/assistant/public', [AssistantController::class, 'publicChat']);
 
     Route::prefix('auth')->group(function () {
         Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:auth');
@@ -90,5 +95,10 @@ Route::prefix('v1')->group(function () {
         // Dashboard and reports
         Route::get('/dashboard/overview', [DashboardController::class, 'overview']);
         Route::get('/reports/energy.csv', [ReportController::class, 'energyCsv']);
+
+        // PulseBot Session Copilot (authenticated, role-gated)
+        Route::get('/assistant/bootstrap', [AssistantController::class, 'bootstrap']);
+        Route::post('/assistant/chat', [AssistantController::class, 'chat']);
+        Route::get('/assistant/logs', [AssistantController::class, 'logs'])->middleware($admin);
     });
 });

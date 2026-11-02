@@ -1270,6 +1270,413 @@ END;
 $$;
 
 -- ----------------------------------------------------------------------------
+-- 5B. NATIVE GROQ INTELLIGENCE ENGINE & CHAT ROUTING (Zero-Edge Fallback)
+-- ----------------------------------------------------------------------------
+
+CREATE EXTENSION IF NOT EXISTS http WITH SCHEMA extensions;
+
+CREATE TABLE IF NOT EXISTS public.assistant_config (
+    key text PRIMARY KEY,
+    value text NOT NULL
+);
+REVOKE ALL ON TABLE public.assistant_config FROM anon, authenticated;
+
+INSERT INTO public.assistant_config (key, value)
+VALUES 
+    ('groq_api_key', ''),
+    ('groq_model', 'qwen/qwen3.8-27b')
+ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value;
+
+CREATE OR REPLACE FUNCTION public.gp_assistant_chat(
+    p_token text,
+    p_message text,
+    p_history jsonb DEFAULT '[]'::jsonb
+)
+RETURNS jsonb
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path = public, extensions
+AS $$
+DECLARE
+    v_start timestamp := clock_timestamp();
+    v_ctx jsonb;
+    v_rl jsonb;
+    v_user_id bigint;
+    v_role text;
+    v_user_name text;
+    v_today text;
+    v_tz text;
+    v_groq_key text;
+    v_groq_model text;
+    v_sys_prompt text;
+    v_messages jsonb := '[]'::jsonb;
+    v_hist_item jsonb;
+    v_tools jsonb;
+    v_req_body jsonb;
+    v_res record;
+    v_groq_res jsonb;
+    v_status int;
+    v_choice jsonb;
+    v_tool_calls jsonb;
+    v_tc jsonb;
+    v_tool_name text;
+    v_tool_args jsonb;
+    v_tool_out jsonb;
+    v_tools_used jsonb := '[]'::jsonb;
+    v_tool_rounds int := 0;
+    v_content text;
+    v_final jsonb;
+    v_latency int;
+BEGIN
+    v_ctx := public.gp_assistant_resolve_user(p_token);
+    IF NOT COALESCE((v_ctx->>'authenticated')::boolean, false) THEN
+        RETURN jsonb_build_object('success', false, 'error', jsonb_build_object('code', 'UNAUTHENTICATED', 'message', 'Sign in to use PulseBot.'));
+    END IF;
+
+    v_user_id := (v_ctx->>'user_id')::bigint;
+    v_role := COALESCE(v_ctx->>'role', 'viewer');
+    v_user_name := COALESCE(v_ctx->>'name', 'User');
+    v_today := COALESCE(v_ctx->>'today', TO_CHAR(NOW() AT TIME ZONE 'Asia/Karachi', 'YYYY-MM-DD'));
+    v_tz := COALESCE(v_ctx->>'timezone', 'Asia/Karachi');
+
+    v_rl := public.gp_assistant_check_rate_limit('user', v_user_id::text, 25, 300);
+    IF NOT COALESCE((v_rl->>'allowed')::boolean, true) THEN
+        RETURN jsonb_build_object('success', false, 'error', jsonb_build_object('code', 'RATE_LIMITED', 'message', 'Too many questions right now. Please wait a few seconds and try again.'));
+    END IF;
+
+    SELECT value INTO v_groq_key FROM public.assistant_config WHERE key = 'groq_api_key';
+    SELECT value INTO v_groq_model FROM public.assistant_config WHERE key = 'groq_model';
+    IF v_groq_key IS NULL OR v_groq_key = '' THEN
+        v_groq_key := current_setting('app.settings.groq_api_key', true);
+    END IF;
+    IF v_groq_model IS NULL OR v_groq_model = '' THEN
+        v_groq_model := 'qwen/qwen3.8-27b';
+    END IF;
+
+    v_sys_prompt := 'You are PulseBot, the visual AI copilot for GridPulse (Chitral renewable-operations platform in Khyber Pakhtunkhwa, Pakistan).' || E'\n' ||
+        'Today is ' || v_today || ' (' || v_tz || ').' || E'\n' ||
+        'Current User: ' || v_user_name || ' (Role: ' || UPPER(v_role) || ').' || E'\n' ||
+        'STRICT ROLE ADAPTATION:' || E'\n' ||
+        CASE v_role
+            WHEN 'admin' THEN 'Role: ADMIN (Operations Chief-of-Staff). Fleet-wide visibility: production, alerts, engineer workloads, overdue items, team, audit trail.'
+            WHEN 'engineer' THEN 'Role: ENGINEER (Field-Ops Co-Pilot). Focus on assigned work orders, active alerts, plant health, troubleshooting. DO NOT query audit logs or team roles.'
+            ELSE 'Role: VIEWER (Plain-language Reporter). Read-only summaries of generation, availability, energy trends, and renewable concepts. DO NOT query audit logs, workloads, or team roles.'
+        END || E'\n\n' ||
+        'OUTPUT FORMAT RULES:' || E'\n' ||
+        'Reply with ONLY valid JSON containing:' || E'\n' ||
+        '1. summary: String (concise summary with numbers).' || E'\n' ||
+        '2. kpis: Array of { label: string, value: string|number, unit?: string, delta?: string, trend?: "up"|"down"|"flat"|"neutral" } (1 to 4).' || E'\n' ||
+        '3. visuals: Array of visual objects for Recharts:' || E'\n' ||
+        '   - Bar chart: { type: "bar", title: string, x: string, series: [{ key: string, label: string }], data: [{ ... }] }' || E'\n' ||
+        '   - Line chart: { type: "line", title: string, x: string, series: [{ key: string, label: string }], data: [{ ... }] }' || E'\n' ||
+        '   - Table: { type: "table", caption: string, columns: [string], rows: [[string|number]] }' || E'\n' ||
+        '4. insights: Array of 1-3 bullet points.' || E'\n' ||
+        '5. links: Array of { label: string, route: string, query?: Record<string, string> } (e.g. route: "/sites", "/alerts", "/work-orders", "/reports", "/team", "/audit").' || E'\n' ||
+        '6. followups: Array of 2-3 logical next-step strings.' || E'\n\n' ||
+        'CRITICAL INVARIANT: READ-ONLY. Never mutate data.';
+
+    v_messages := jsonb_build_array(jsonb_build_object('role', 'system', 'content', v_sys_prompt));
+    IF p_history IS NOT NULL AND jsonb_typeof(p_history) = 'array' THEN
+        FOR v_hist_item IN SELECT * FROM jsonb_array_elements(p_history) LOOP
+            IF v_hist_item->>'role' IN ('user', 'assistant') AND NULLIF(v_hist_item->>'content', '') IS NOT NULL THEN
+                v_messages := v_messages || jsonb_build_array(jsonb_build_object(
+                    'role', v_hist_item->>'role',
+                    'content', v_hist_item->>'content'
+                ));
+            END IF;
+        END LOOP;
+    END IF;
+    v_messages := v_messages || jsonb_build_array(jsonb_build_object('role', 'user', 'content', p_message));
+
+    v_tools := jsonb_build_array(
+        jsonb_build_object('type', 'function', 'function', jsonb_build_object('name', 'fleet_overview', 'description', 'Current output, capacity factor, availability, site status counts', 'parameters', jsonb_build_object('type', 'object', 'properties', '{}'::jsonb))),
+        jsonb_build_object('type', 'function', 'function', jsonb_build_object('name', 'site_summary', 'description', 'Site detail, per-technology generation/efficiency, asset health', 'parameters', jsonb_build_object('type', 'object', 'properties', jsonb_build_object('site_id_or_name', jsonb_build_object('type', 'string'))))),
+        jsonb_build_object('type', 'function', 'function', jsonb_build_object('name', 'list_sites', 'description', 'Lookup sites by technology or status', 'parameters', jsonb_build_object('type', 'object', 'properties', jsonb_build_object('technology', jsonb_build_object('type', 'string'), 'status', jsonb_build_object('type', 'string'))))),
+        jsonb_build_object('type', 'function', 'function', jsonb_build_object('name', 'alerts_summary', 'description', 'Open alerts count by severity and status', 'parameters', jsonb_build_object('type', 'object', 'properties', jsonb_build_object('severity', jsonb_build_object('type', 'string'))))),
+        jsonb_build_object('type', 'function', 'function', jsonb_build_object('name', 'list_alerts', 'description', 'List recent alerts', 'parameters', jsonb_build_object('type', 'object', 'properties', jsonb_build_object('severity', jsonb_build_object('type', 'string'))))),
+        jsonb_build_object('type', 'function', 'function', jsonb_build_object('name', 'work_orders_summary', 'description', 'Counts by status, priority, assignee', 'parameters', jsonb_build_object('type', 'object', 'properties', jsonb_build_object('assignee_id', jsonb_build_object('type', 'integer'))))),
+        jsonb_build_object('type', 'function', 'function', jsonb_build_object('name', 'work_orders_list', 'description', 'List open and recent work orders', 'parameters', jsonb_build_object('type', 'object', 'properties', jsonb_build_object('status', jsonb_build_object('type', 'string'))))),
+        jsonb_build_object('type', 'function', 'function', jsonb_build_object('name', 'engineer_workload', 'description', 'Assigned vs done vs in-progress vs overdue', 'parameters', jsonb_build_object('type', 'object', 'properties', jsonb_build_object('assignee_id', jsonb_build_object('type', 'integer'))))),
+        jsonb_build_object('type', 'function', 'function', jsonb_build_object('name', 'energy_report', 'description', 'Energy by site/technology/day', 'parameters', jsonb_build_object('type', 'object', 'properties', jsonb_build_object('range', jsonb_build_object('type', 'string'), 'group_by', jsonb_build_object('type', 'string')))))
+    );
+
+    v_req_body := jsonb_build_object(
+        'model', v_groq_model,
+        'messages', v_messages,
+        'tools', v_tools,
+        'tool_choice', 'auto',
+        'max_tokens', 500
+    );
+
+    SELECT status, content INTO v_res
+    FROM extensions.http((
+        'POST',
+        'https://api.groq.com/openai/v1/chat/completions',
+        ARRAY[
+            extensions.http_header('Authorization', 'Bearer ' || v_groq_key)
+        ],
+        'application/json',
+        v_req_body::text
+    )::extensions.http_request);
+
+    v_status := v_res.status;
+
+    IF v_status = 429 THEN
+        v_groq_model := 'openai/gpt-oss-120b';
+        v_req_body := jsonb_set(v_req_body, '{model}', to_jsonb(v_groq_model));
+        SELECT status, content INTO v_res
+        FROM extensions.http((
+            'POST',
+            'https://api.groq.com/openai/v1/chat/completions',
+            ARRAY[
+                extensions.http_header('Authorization', 'Bearer ' || v_groq_key)
+            ],
+            'application/json',
+            v_req_body::text
+        )::extensions.http_request);
+        v_status := v_res.status;
+    END IF;
+
+    IF v_status <> 200 THEN
+        RETURN jsonb_build_object('success', false, 'status', v_status, 'error', jsonb_build_object('code', 'GROQ_ERROR', 'message', 'PulseBot intelligence service temporarily unavailable (' || v_status::text || ').'));
+    END IF;
+
+    BEGIN
+        v_groq_res := v_res.content::jsonb;
+    EXCEPTION WHEN OTHERS THEN
+        RETURN jsonb_build_object('success', false, 'status', 500, 'error', jsonb_build_object('code', 'GROQ_ERROR', 'message', 'Invalid JSON from Groq'));
+    END;
+
+    v_choice := v_groq_res->'choices'->0;
+    v_tool_calls := v_choice->'message'->'tool_calls';
+
+    IF v_tool_calls IS NOT NULL AND jsonb_typeof(v_tool_calls) = 'array' AND jsonb_array_length(v_tool_calls) > 0 THEN
+        v_messages := v_messages || jsonb_build_array(v_choice->'message');
+        v_tool_rounds := 1;
+
+        FOR v_tc IN SELECT * FROM jsonb_array_elements(v_tool_calls) LOOP
+            v_tool_name := v_tc->'function'->>'name';
+            BEGIN
+                v_tool_args := (v_tc->'function'->>'arguments')::jsonb;
+            EXCEPTION WHEN OTHERS THEN
+                v_tool_args := '{}'::jsonb;
+            END;
+
+            v_tools_used := v_tools_used || jsonb_build_array(v_tool_name);
+            v_tool_out := public.gp_assistant_exec_tool(p_token, v_tool_name, v_tool_args);
+
+            v_messages := v_messages || jsonb_build_array(jsonb_build_object(
+                'role', 'tool',
+                'tool_call_id', v_tc->>'id',
+                'name', v_tool_name,
+                'content', v_tool_out::text
+            ));
+        END LOOP;
+
+        v_req_body := jsonb_build_object(
+            'model', v_groq_model,
+            'messages', v_messages,
+            'response_format', jsonb_build_object('type', 'json_object'),
+            'max_tokens', 650
+        );
+
+        SELECT status, content INTO v_res
+        FROM extensions.http((
+            'POST',
+            'https://api.groq.com/openai/v1/chat/completions',
+            ARRAY[
+                extensions.http_header('Authorization', 'Bearer ' || v_groq_key)
+            ],
+            'application/json',
+            v_req_body::text
+        )::extensions.http_request);
+
+        IF v_res.status <> 200 THEN
+            RETURN jsonb_build_object('success', false, 'status', v_res.status, 'error', jsonb_build_object('code', 'GROQ_ERROR', 'message', 'PulseBot synthesis temporarily unavailable (' || v_res.status::text || ').'));
+        END IF;
+
+        v_groq_res := v_res.content::jsonb;
+        v_choice := v_groq_res->'choices'->0;
+    END IF;
+
+    v_content := v_choice->'message'->>'content';
+    BEGIN
+        v_final := v_content::jsonb;
+    EXCEPTION WHEN OTHERS THEN
+        v_final := jsonb_build_object(
+            'summary', COALESCE(v_content, 'PulseBot processed your operational request.'),
+            'kpis', '[]'::jsonb,
+            'visuals', '[]'::jsonb,
+            'insights', '[]'::jsonb,
+            'links', jsonb_build_array(jsonb_build_object('label', 'Sites Overview', 'route', '/sites')),
+            'followups', jsonb_build_array('What is the fleet status today?', 'Show open critical alerts')
+        );
+    END;
+
+    IF v_final->'summary' IS NULL THEN
+        v_final := jsonb_set(v_final, '{summary}', to_jsonb('Operations summary for GridPulse.'::text));
+    END IF;
+    IF v_final->'kpis' IS NULL OR jsonb_typeof(v_final->'kpis') <> 'array' THEN
+        v_final := jsonb_set(v_final, '{kpis}', '[]'::jsonb);
+    END IF;
+    IF v_final->'visuals' IS NULL OR jsonb_typeof(v_final->'visuals') <> 'array' THEN
+        v_final := jsonb_set(v_final, '{visuals}', '[]'::jsonb);
+    END IF;
+    IF v_final->'insights' IS NULL OR jsonb_typeof(v_final->'insights') <> 'array' THEN
+        v_final := jsonb_set(v_final, '{insights}', '[]'::jsonb);
+    END IF;
+    IF v_final->'links' IS NULL OR jsonb_typeof(v_final->'links') <> 'array' THEN
+        v_final := jsonb_set(v_final, '{links}', '[]'::jsonb);
+    END IF;
+    IF v_final->'followups' IS NULL OR jsonb_typeof(v_final->'followups') <> 'array' THEN
+        v_final := jsonb_set(v_final, '{followups}', '[]'::jsonb);
+    END IF;
+
+    v_latency := ROUND(EXTRACT(MILLISECONDS FROM (clock_timestamp() - v_start)))::int;
+
+    PERFORM public.gp_assistant_write_log(v_user_id, v_role, 'session', v_tools_used, v_tool_rounds::smallint, v_latency, 'ok', NULL, NULL);
+
+    RETURN jsonb_build_object(
+        'success', true,
+        'data', v_final,
+        'meta', jsonb_build_object('tools_used', v_tools_used, 'latency_ms', v_latency)
+    );
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.gp_assistant_public(
+    p_message text,
+    p_history jsonb DEFAULT '[]'::jsonb,
+    p_ip text DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path = public, extensions
+AS $$
+DECLARE
+    v_start timestamp := clock_timestamp();
+    v_rl jsonb;
+    v_groq_key text;
+    v_groq_model text;
+    v_sys_prompt text;
+    v_messages jsonb := '[]'::jsonb;
+    v_hist_item jsonb;
+    v_req_body jsonb;
+    v_res record;
+    v_groq_res jsonb;
+    v_status int;
+    v_content text;
+    v_final jsonb;
+    v_latency int;
+    v_ip_ident text := COALESCE(NULLIF(TRIM(p_ip), ''), 'anon_public');
+BEGIN
+    v_rl := public.gp_assistant_check_rate_limit('public_ip', v_ip_ident, 20, 300);
+    IF NOT COALESCE((v_rl->>'allowed')::boolean, true) THEN
+        RETURN jsonb_build_object(
+            'success', false,
+            'error', jsonb_build_object('code', 'RATE_LIMITED', 'message', 'Too many questions right now. Please wait a few seconds and try again.')
+        );
+    END IF;
+
+    SELECT value INTO v_groq_key FROM public.assistant_config WHERE key = 'groq_api_key';
+    SELECT value INTO v_groq_model FROM public.assistant_config WHERE key = 'groq_model';
+    IF v_groq_key IS NULL OR v_groq_key = '' THEN
+        v_groq_key := current_setting('app.settings.groq_api_key', true);
+    END IF;
+    IF v_groq_model IS NULL OR v_groq_model = '' THEN
+        v_groq_model := 'qwen/qwen3.8-27b';
+    END IF;
+
+    v_sys_prompt := 'You are PulseBot, the public FAQ assistant on the landing/login page of GridPulse.' || E'\n' ||
+        'GridPulse is the live renewable-operations platform for Chitral district in Khyber Pakhtunkhwa, Pakistan.' || E'\n' ||
+        'It monitors 11 generation plants (7 hydro including 108 MW Golen Gol and 69 MW Lawi, 3 solar parks in Mastuj, Booni, and Drosh, and 1 wind pilot at Shandur Pass).' || E'\n\n' ||
+        'PLATFORM DETAILS:' || E'\n' ||
+        '- Roles: Admin (full operations, team management, audit log), Engineer (field ops, acknowledge/resolve alerts, work orders), Viewer (read-only reports and dashboards).' || E'\n' ||
+        '- Demo Accounts: Admin (admin@gridpulse.io / Admin12345), Engineer (engineer@gridpulse.io / Engineer12345), Viewer (viewer@gridpulse.io / Viewer12345).' || E'\n' ||
+        '- Alerts: Triggered by telemetry thresholds (low efficiency, over-frequency, over-temperature, low battery). Can convert to work orders.' || E'\n' ||
+        '- Work Orders: Kanban and table views with priorities (low, medium, high, critical) and statuses (planned, in_progress, blocked, done).' || E'\n' ||
+        '- Tech Stack: React 18 + TypeScript + Vite on Vercel; Supabase PostgreSQL + Row Level Security + PostgREST RPC backend.' || E'\n\n' ||
+        'OUTPUT RULES:' || E'\n' ||
+        'Never disclose private operational data or live real-time values to public users.' || E'\n' ||
+        'Return ONLY valid JSON with keys:' || E'\n' ||
+        '- summary: String (concise answer)' || E'\n' ||
+        '- bullets: Array of 2-4 strings' || E'\n' ||
+        '- links: Array of { label: string, route: string }' || E'\n' ||
+        '- followups: Array of 2-3 strings';
+
+    v_messages := jsonb_build_array(jsonb_build_object('role', 'system', 'content', v_sys_prompt));
+    IF p_history IS NOT NULL AND jsonb_typeof(p_history) = 'array' THEN
+        FOR v_hist_item IN SELECT * FROM jsonb_array_elements(p_history) LOOP
+            IF v_hist_item->>'role' IN ('user', 'assistant') AND NULLIF(v_hist_item->>'content', '') IS NOT NULL THEN
+                v_messages := v_messages || jsonb_build_array(jsonb_build_object(
+                    'role', v_hist_item->>'role',
+                    'content', v_hist_item->>'content'
+                ));
+            END IF;
+        END LOOP;
+    END IF;
+    v_messages := v_messages || jsonb_build_array(jsonb_build_object('role', 'user', 'content', p_message));
+
+    v_req_body := jsonb_build_object(
+        'model', v_groq_model,
+        'messages', v_messages,
+        'response_format', jsonb_build_object('type', 'json_object'),
+        'max_tokens', 600
+    );
+
+    SELECT status, content INTO v_res
+    FROM extensions.http((
+        'POST',
+        'https://api.groq.com/openai/v1/chat/completions',
+        ARRAY[
+            extensions.http_header('Authorization', 'Bearer ' || v_groq_key)
+        ],
+        'application/json',
+        v_req_body::text
+    )::extensions.http_request);
+
+    IF v_res.status <> 200 THEN
+        RETURN jsonb_build_object(
+            'success', false,
+            'error', jsonb_build_object('code', 'GROQ_ERROR', 'message', 'Public info assistant temporarily unavailable (' || v_res.status::text || ').')
+        );
+    END IF;
+
+    v_content := (v_res.content::jsonb)->'choices'->0->'message'->>'content';
+    BEGIN
+        v_final := v_content::jsonb;
+    EXCEPTION WHEN OTHERS THEN
+        v_final := jsonb_build_object(
+            'summary', COALESCE(v_content, 'GridPulse is the live renewable-operations platform for Chitral.'),
+            'bullets', jsonb_build_array('Monitors 11 hydro, solar, and wind plants.', 'Sign in to access live telemetry and dispatch work orders.'),
+            'links', jsonb_build_array(jsonb_build_object('label', 'Sign In to Demo', 'route', '/login')),
+            'followups', jsonb_build_array('What are the demo login credentials?', 'How do alerts turn into work orders?')
+        );
+    END;
+
+    IF v_final->'summary' IS NULL THEN
+        v_final := jsonb_set(v_final, '{summary}', to_jsonb('GridPulse overview and capabilities.'::text));
+    END IF;
+    IF v_final->'bullets' IS NULL OR jsonb_typeof(v_final->'bullets') <> 'array' THEN
+        v_final := jsonb_set(v_final, '{bullets}', '[]'::jsonb);
+    END IF;
+    IF v_final->'links' IS NULL OR jsonb_typeof(v_final->'links') <> 'array' THEN
+        v_final := jsonb_set(v_final, '{links}', '[]'::jsonb);
+    END IF;
+    IF v_final->'followups' IS NULL OR jsonb_typeof(v_final->'followups') <> 'array' THEN
+        v_final := jsonb_set(v_final, '{followups}', '[]'::jsonb);
+    END IF;
+
+    v_latency := ROUND(EXTRACT(MILLISECONDS FROM (clock_timestamp() - v_start)))::int;
+
+    PERFORM public.gp_assistant_write_log(NULL, 'viewer', 'public', '[]'::jsonb, 0::smallint, v_latency, 'ok', NULL, md5(v_ip_ident));
+
+    RETURN jsonb_build_object(
+        'success', true,
+        'data', v_final,
+        'meta', jsonb_build_object('latency_ms', v_latency)
+    );
+END;
+$$;
+
+-- ----------------------------------------------------------------------------
 -- 6. EXTEND `public.gp_api` FOR `/assistant/bootstrap`, `/assistant/logs`,
 --    AND DEEP-LINK FILTERS ON `/work-orders` AND `/audit`
 -- ----------------------------------------------------------------------------
@@ -1327,6 +1734,16 @@ BEGIN
     -- Assistant bootstrap (role-specific welcome & starter prompts)
     IF v_method = 'GET' AND v_path = '/assistant/bootstrap' THEN
         RETURN public.gp_assistant_bootstrap(p_token);
+    END IF;
+
+    -- Assistant session chat (in-app role-aware visual copilot)
+    IF v_method = 'POST' AND v_path = '/assistant/chat' THEN
+        RETURN public.gp_assistant_chat(p_token, p_body->>'message', COALESCE(p_body->'history', '[]'::jsonb));
+    END IF;
+
+    -- Assistant public FAQ info box (landing and login page)
+    IF v_method = 'POST' AND v_path = '/assistant/public' THEN
+        RETURN public.gp_assistant_public(p_body->>'message', COALESCE(p_body->'history', '[]'::jsonb), p_ip);
     END IF;
 
     -- Admin-only assistant telemetry/audit logs
@@ -1529,5 +1946,7 @@ GRANT EXECUTE ON FUNCTION public.gp_assistant_write_log(bigint, text, text, json
 GRANT EXECUTE ON FUNCTION public.gp_assistant_resolve_user(text) TO anon, authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.gp_assistant_bootstrap(text) TO anon, authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.gp_assistant_exec_tool(text, text, jsonb) TO anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.gp_assistant_chat(text, text, jsonb) TO anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.gp_assistant_public(text, jsonb, text) TO anon, authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.gp_api(text, text, jsonb, jsonb, text, text, text) TO anon, authenticated, service_role;
 

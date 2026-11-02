@@ -347,10 +347,86 @@ function TableBlock({ visual }: { visual: TableVisual }) {
   );
 }
 
-export function AssistantVisualBlock({ visual }: { visual: AssistantVisual }) {
-  if (visual.type === 'table') {
-    return <TableBlock visual={visual} />;
+function normalizeVisual(raw: AssistantVisual): AssistantVisual | null {
+  if (!raw || typeof raw !== 'object') return null;
+
+  if (raw.type === 'table') {
+    const t = raw as TableVisual;
+    const columns = Array.isArray(t.columns) ? t.columns.map(String) : [];
+    const rows = Array.isArray(t.rows) ? t.rows.filter(Array.isArray) : [];
+    if (columns.length === 0 && rows.length === 0) return null;
+    return {
+      type: 'table',
+      caption: t.caption || 'Operational Summary',
+      columns,
+      rows,
+    };
   }
-  return <RechartsVisual visual={visual} />;
+
+  const c = raw as unknown as Record<string, unknown>;
+  const rawType = String(c.type ?? 'bar').toLowerCase();
+  const validTypes = ['bar', 'line', 'area', 'stacked_bar', 'pie', 'progress'];
+  const type = (validTypes.includes(rawType) ? rawType : 'bar') as ChartVisual['type'];
+  const title = String(c.title ?? 'Telemetry Visual');
+  const unit = c.unit ? String(c.unit) : undefined;
+  let x = String(c.x ?? c.xAxisKey ?? 'name');
+
+  let data: Array<Record<string, string | number | null>> = [];
+  if (Array.isArray(c.data)) {
+    data = c.data.filter((d): d is Record<string, string | number | null> => d && typeof d === 'object');
+  } else if (c.data && typeof c.data === 'object') {
+    data = Object.entries(c.data as Record<string, unknown>).map(([k, v]) => ({
+      name: k,
+      value: typeof v === 'number' ? v : Number(v) || 0,
+    }));
+    x = 'name';
+  }
+
+  if (data.length === 0) return null;
+
+  let series: Array<{ key: string; label: string; color?: string }> = [];
+  if (Array.isArray(c.series) && c.series.length > 0) {
+    series = (c.series as Array<{ key?: string; label?: string; color?: string }>)
+      .filter((s): s is { key: string; label?: string; color?: string } => Boolean(s && typeof s.key === 'string'))
+      .map((s, idx) => ({
+        key: s.key,
+        label: s.label || s.key,
+        color: s.color || PALETTE[idx % PALETTE.length],
+      }));
+  }
+
+  if (series.length === 0) {
+    const sample = data[0] ?? {};
+    const candidateKeys = Object.keys(sample).filter(
+      (k) => k !== x && typeof sample[k] === 'number',
+    );
+    if (candidateKeys.length > 0) {
+      series = candidateKeys.map((k, idx) => ({
+        key: k,
+        label: k.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
+        color: PALETTE[idx % PALETTE.length],
+      }));
+    } else {
+      series = [{ key: 'value', label: 'Value', color: PALETTE[0] }];
+    }
+  }
+
+  return {
+    type,
+    title,
+    x,
+    series,
+    data,
+    unit,
+  };
+}
+
+export function AssistantVisualBlock({ visual }: { visual: AssistantVisual }) {
+  const norm = normalizeVisual(visual);
+  if (!norm) return null;
+  if (norm.type === 'table') {
+    return <TableBlock visual={norm} />;
+  }
+  return <RechartsVisual visual={norm} />;
 }
 

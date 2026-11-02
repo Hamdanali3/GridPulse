@@ -6,6 +6,7 @@ import {
   USE_SUPABASE_RPC,
   get,
   getToken,
+  postEnvelope,
 } from './api';
 import type { Role, User } from './types';
 
@@ -373,6 +374,24 @@ export async function streamSessionChat(params: {
   onDelta?: (deltaText: string) => void;
   signal?: AbortSignal;
 }): Promise<{ response: SessionAssistantResponse; toolsUsed: string[]; latencyMs?: number }> {
+  params.onStatus?.('Consulting GridPulse operations knowledge…', 'knowledge');
+
+  if (USE_SUPABASE_RPC && !CUSTOM_API_ORIGIN) {
+    params.onStatus?.('Analyzing live plant telemetry…', 'tools');
+    const envelope = await postEnvelope<
+      SessionAssistantResponse,
+      { tools_used?: string[]; latency_ms?: number }
+    >('/assistant/chat', {
+      message: params.message,
+      history: params.history,
+    });
+    return {
+      response: envelope.data,
+      toolsUsed: envelope.meta?.tools_used ?? [],
+      latencyMs: envelope.meta?.latency_ms,
+    };
+  }
+
   const { url, headers } = sessionEndpoint();
   return consumeAssistantStream<SessionAssistantResponse>(
     url,
@@ -393,6 +412,22 @@ export async function streamPublicChat(params: {
   onDelta?: (deltaText: string) => void;
   signal?: AbortSignal;
 }): Promise<{ response: PublicAssistantResponse; latencyMs?: number }> {
+  params.onStatus?.('Consulting GridPulse public knowledge base…', 'knowledge');
+
+  if (USE_SUPABASE_RPC && !CUSTOM_API_ORIGIN) {
+    const envelope = await postEnvelope<PublicAssistantResponse, { latency_ms?: number }>(
+      '/assistant/public',
+      {
+        message: params.message,
+        history: params.history,
+      },
+    );
+    return {
+      response: envelope.data,
+      latencyMs: envelope.meta?.latency_ms,
+    };
+  }
+
   const { url, headers } = publicEndpoint();
   const res = await consumeAssistantStream<PublicAssistantResponse>(
     url,

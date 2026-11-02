@@ -259,6 +259,17 @@ export async function post<T>(url: string, body?: unknown): Promise<T> {
   return res.data.data;
 }
 
+export async function postEnvelope<T, M = unknown>(
+  url: string,
+  body?: unknown,
+): Promise<{ data: T; meta?: M }> {
+  const res = await api.post<{ data: T; meta?: M }>(url, body);
+  return {
+    data: res.data.data,
+    meta: res.data.meta,
+  };
+}
+
 export async function patch<T>(url: string, body?: unknown): Promise<T> {
   const res = await api.patch<{ data: T }>(url, body);
   return res.data.data;

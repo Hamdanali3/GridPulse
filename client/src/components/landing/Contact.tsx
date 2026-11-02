@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { toast } from 'sonner';
 import Reveal from './Reveal';
 
-const CONTACT_EMAIL = 'hello@gridpulse.io';
+const CONTACT_EMAIL = 'h27907177@gmail.com';
 const GITHUB_URL = 'https://github.com/Hamdanali3/GridPulse';
 
 interface FormState {

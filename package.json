@@ -1,0 +1,15 @@
+{
+  "name": "gridpulse-root",
+  "version": "1.0.0",
+  "private": true,
+  "description": "GridPulse workspace root scripts",
+  "scripts": {
+    "dev": "npm --prefix client run dev",
+    "build": "npm --prefix client run build",
+    "preview": "npm --prefix client run preview",
+    "typecheck": "npm run typecheck:client && npm run typecheck:functions",
+    "typecheck:client": "npm --prefix client run lint",
+    "typecheck:functions": "node client/node_modules/typescript/bin/tsc -p supabase/functions/tsconfig.json --noEmit",
+    "test:assistant": "npm --prefix client run test:assistant"
+  }
+}

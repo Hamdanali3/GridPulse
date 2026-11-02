@@ -878,7 +878,7 @@ export async function runSessionCopilot(params: {
         { role: 'assistant', content: rawJsonText || '{}' },
         {
           role: 'user',
-          content: `Your JSON failed schema validation: ${firstValidation.reason}. Fix the JSON strictly according to the schema and use only verified GridPulse routes.`,
+          content: `Your JSON failed schema validation: ${'reason' in firstValidation ? firstValidation.reason : 'schema mismatch'}. Fix the JSON strictly according to the schema and use only verified GridPulse routes.`,
         },
       ],
       response_format: { type: 'json_object' },
@@ -1095,7 +1095,7 @@ export async function runPublicGuide(params: {
       messages: [
         ...messages,
         { role: 'assistant', content: rawText || '{}' },
-        { role: 'user', content: `Fix JSON schema error: ${validated.reason}. Return valid JSON only.` },
+        { role: 'user', content: `Fix JSON schema error: ${'reason' in validated ? validated.reason : 'schema mismatch'}. Return valid JSON only.` },
       ],
       response_format: { type: 'json_object' },
       temperature: 0.05,

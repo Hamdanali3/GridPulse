@@ -1,3 +1,5 @@
+/// <reference path="./types.d.ts" />
+
 // Hardened PostgreSQL bridge for PulseBot Edge Functions.
 // - Never trusts user_id or role from request body; resolves session strictly from Authorization token.
 // - Never uses SUPABASE_SERVICE_ROLE_KEY in tools that return data to users, and NEVER in pulsebot-public.

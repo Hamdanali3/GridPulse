@@ -25,7 +25,7 @@ services:
     environment:
       APP_ENV: production
       APP_DEBUG: "false"
-      APP_KEY: ${APP_KEY:?Set APP_KEY in a root .env file (generate one with: cd api && php artisan key:generate --show)}
+      APP_KEY: "${APP_KEY:?Set APP_KEY in a root .env file (generate one with: cd api && php artisan key:generate --show)}"
       APP_URL: http://localhost:8000
       CLIENT_ORIGIN: http://localhost:3000
       DB_CONNECTION: mysql

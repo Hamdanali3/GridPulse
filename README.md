@@ -31,7 +31,8 @@ turns every alert into tracked work.
   asset and alert they came from; finishing the work resolves the alert.
 - **Reports** — energy by site, technology or day for any date range, CSV export.
 - **Team and audit** — admin manages roles and deactivation; every sign-in and change is logged.
-- **Telemetry simulator** — a Laravel scheduled command that plays the role of the field devices,
+- **PulseBot AI Copilot & Public Guide** — role-aware Groq assistant across two surfaces: an in-app Session Copilot dock (`Admin`, `Engineer`, `Viewer`) that answers strictly from real operational SQL aggregates with KPI cards, Recharts visuals, tables, and pre-filtered React Router deep links; plus a public Homepage Info Box on `/` and `/login` backed exclusively by curated project documentation with zero private database access. See [docs/ASSISTANT.md](docs/ASSISTANT.md).
+- **Telemetry simulator** — a Laravel scheduled command (and `pg_cron` job on Supabase) that plays the role of the field devices,
   producing physically plausible readings every 5 seconds (solar follows a daylight curve, wind
   follows a turbine power curve, hydro is steady base load).
 
@@ -39,10 +40,11 @@ turns every alert into tracked work.
 
 | Layer | Choice |
 | --- | --- |
-| API | Laravel 12, PHP 8.4+, Laravel Sanctum tokens, Form Requests, API Resources, PHPUnit |
-| Database | SQLite for development and tests; MySQL 8 for production (all queries are driver-portable) |
-| Client | React 18, TypeScript, Vite, React Router, TanStack Query, React Hook Form + Zod, Recharts, Leaflet, Tailwind CSS v4 |
-| Ops | Docker Compose (MySQL + API + nginx client), GitHub Actions CI |
+| Production Backend | Supabase PostgreSQL + Row Level Security (RLS), SQL RPCs (`public.gp_api`, `public.gp_assistant_exec_tool`), `pg_cron` simulator, Supabase Edge Functions (`api`, `pulsebot`, `pulsebot-public`) |
+| AI Copilot | Groq (`llama-3.3-70b-versatile`, configurable via `GROQ_MODEL`), SSE streaming, server-side JSON contract validation, per-user & per-IP rate limiting |
+| Reference API | Laravel 12, PHP 8.4+, Laravel Sanctum tokens, Form Requests, API Resources, PHPUnit (`Http::fake` assistant suite) |
+| Client | React 18, TypeScript, Vite, React Router, TanStack Query, React Hook Form + Zod, Recharts, Leaflet, Tailwind CSS v4 (deployed on Vercel) |
+| Ops | Vercel SPA + Supabase Edge/Postgres, Docker Compose (MySQL + API + nginx client), GitHub Actions CI |
 
 ## How to run it (step by step)
 
@@ -138,34 +140,54 @@ The API container migrates, seeds the demo fleet on first boot, runs the schedul
 ## Tests
 
 ```bash
-cd api && php artisan test      # 30 feature + 6 unit tests, 235 assertions
-cd client && npm run lint && npm run build
+cd api && php artisan test      # 49 feature + unit tests (including PulseBot RBAC & acceptance scenarios)
+cd client && npm run lint && npm run test:assistant && npm run build
+```
+
+## Architecture
+
+```
+Browser (Vercel SPA: React 18 + Recharts + React Router)
+  ├── Control Room REST/RPC ────────► Supabase PostgREST (`public.gp_api` + RLS)
+  ├── Session Copilot (SSE + Auth) ─► Supabase Edge Function `/functions/v1/pulsebot` ──► Groq API
+  │                                       └──► Verified SQL tools (`gp_assistant_exec_tool`)
+  └── Homepage Info Box (Public) ───► Supabase Edge Function `/functions/v1/pulsebot-public` ──► Groq API
+                                          └──► Curated Knowledge Base only (zero operational DB tools)
 ```
 
 ## Project layout
 
 ```
-api/                     Laravel API
+api/                     Laravel 12 API (local dev, Docker & PHPUnit test suite)
   app/Enums              PHP enums for roles, statuses, severities
-  app/Http/Controllers   one controller per resource
+  app/Http/Controllers   one controller per resource (including AssistantController)
   app/Http/Requests      Form Request validation
   app/Http/Resources     JSON shapes returned to the client
-  app/Services           TelemetrySimulator, EnergyService, AuditLogger
-  app/Console/Commands   gridpulse:tick, gridpulse:prune
-  database/migrations    schema (see docs/DATABASE_SCHEMA.md)
-  database/seeders       DemoFleetSeeder (Chitral fleet)
-  tests/Feature          PHPUnit suite
-client/                  React SPA
-  src/lib                api client, auth context, types, formatters
-  src/components         UI primitives and charts
-  src/pages              one file per screen
-docs/                    PRD, database design, API contract, wireframes, image guide
+  app/Services           TelemetrySimulator, EnergyService, AuditLogger, Assistant/*
+  resources/knowledge    versioned curated PulseBot knowledge base (gridpulse_kb.json)
+  database/migrations    schema + assistant_usage / assistant_logs
+  tests/Feature          PHPUnit suite (including AssistantTest with Http::fake)
+supabase/                Production Supabase backend
+  config.toml            Edge Function gateway configuration
+  migrations/            PostgreSQL schema, RLS policies, simulator & PulseBot SQL RPCs
+  functions/             Edge Functions: `api`, `pulsebot`, `pulsebot-public`, `_shared/`
+client/                  React SPA (deployed on Vercel)
+  src/lib                api client, SSE assistant client, auth context, types, formatters
+  src/components/chat    ChatDock, AssistantMessageCard, AssistantVisuals, PublicInfoBox
+  src/pages              one file per screen (with URL query-param deep-link filters)
+docs/                    PRD, database design, API contract, wireframes, SUPABASE_DEPLOYMENT, ASSISTANT
 ```
 
 ## API
 
-Base URL `/api/v1`. Full contract in [docs/API_ROUTES.md](docs/API_ROUTES.md). Every response uses one
+Base URL `/api/v1`. Full contract in [docs/API_ROUTES.md](docs/API_ROUTES.md) and assistant contract in [docs/ASSISTANT.md](docs/ASSISTANT.md). Every response uses one
 envelope: `{ success, data, meta? }` or `{ success: false, error: { code, message, details? } }`.
+
+Key PulseBot endpoints:
+- `GET /api/v1/assistant/bootstrap` (or `GET /functions/v1/pulsebot`) — authenticated role persona & starter prompts
+- `POST /api/v1/assistant/chat` (or `POST /functions/v1/pulsebot`) — authenticated SSE / JSON Session Copilot
+- `GET /api/v1/assistant/logs` — Admin-only assistant telemetry & tool audit trail
+- `POST /api/v1/assistant/public` (or `POST /functions/v1/pulsebot-public`) — public Homepage Info Box (curated KB only)
 
 ## Roles
 
@@ -182,6 +204,19 @@ Enforced server-side by the `role:` middleware on every write route; the client 
 ## Deployment
 
 GridPulse deploys with **Vercel** hosting the static React SPA (`client/`) and **Supabase** running the production backend (PostgreSQL `public.gp_api` RPC, Edge Function `supabase/functions/api`, `pg_cron` live telemetry simulator, and Row Level Security). See [docs/SUPABASE_DEPLOYMENT.md](docs/SUPABASE_DEPLOYMENT.md) for the full Supabase setup.
+
+### Deploy PulseBot & Supabase backend
+
+Store the Groq secret in Supabase (never in Vercel or `VITE_*` variables), push migrations, and deploy the Edge Functions:
+
+```bash
+npx supabase secrets set GROQ_API_KEY=gsk_... GROQ_MODEL=llama-3.3-70b-versatile
+npx supabase db push
+npx supabase functions deploy pulsebot
+npx supabase functions deploy pulsebot-public
+```
+
+For local Edge Function testing, copy `supabase/.env.example` to git-ignored `supabase/.env.local` and run `npx supabase functions serve --env-file supabase/.env.local`. Full instructions in [docs/ASSISTANT.md](docs/ASSISTANT.md).
 
 ### Deploy the web app to Vercel
 

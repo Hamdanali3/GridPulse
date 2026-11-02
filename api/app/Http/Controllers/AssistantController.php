@@ -63,7 +63,7 @@ class AssistantController extends Controller
 
         if ($wantsStream) {
             return response()->stream(function () use ($ctx, $message, $history, $ipHash) {
-                $emit = function (string $event, array $payload): void {
+                $emit = function (string $event, array|object $payload): void {
                     echo "event: {$event}\n";
                     echo 'data: '.json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)."\n\n";
                     if (ob_get_level() > 0) {
@@ -148,7 +148,7 @@ class AssistantController extends Controller
 
         if ($wantsStream) {
             return response()->stream(function () use ($message, $history, $ipHash) {
-                $emit = function (string $event, array $payload): void {
+                $emit = function (string $event, array|object $payload): void {
                     echo "event: {$event}\n";
                     echo 'data: '.json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)."\n\n";
                     if (ob_get_level() > 0) {

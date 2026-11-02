@@ -141,7 +141,7 @@ export async function execSqlTool(
 ): Promise<Record<string, unknown>> {
   if (sql) {
     const rows = await sql<{ res: Record<string, unknown> }[]>`
-      SELECT public.gp_assistant_exec_tool(${authHeader}, ${toolName}, ${sql.json(args)}) AS res
+      SELECT public.gp_assistant_exec_tool(${authHeader}, ${toolName}, ${sql.json(JSON.parse(JSON.stringify(args ?? {})))}) AS res
     `;
     return rows[0]?.res ?? { error: 'empty_result', message: 'No response from database tool.' };
   }

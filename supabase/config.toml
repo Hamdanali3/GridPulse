@@ -11,3 +11,16 @@ max_rows = 1000
 enabled = true
 verify_jwt = false
 entrypoint = "./functions/api/index.ts"
+
+# Note: GridPulse authenticates sessions with Sanctum SHA-256 tokens (`<id>|<hex>`) stored in
+# `public.personal_access_tokens` (not GoTrue HS256 JWTs), so gateway `verify_jwt` is false while
+# `functions/pulsebot/index.ts` enforces strict token verification on step 1 via `gp_assistant_resolve_user`.
+[functions.pulsebot]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/pulsebot/index.ts"
+
+[functions.pulsebot-public]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/pulsebot-public/index.ts"

@@ -4,6 +4,7 @@ import { Menu, X } from 'lucide-react';
 import { clsx } from 'clsx';
 import Logo from '../Logo';
 import { ThemeToggle } from '../../lib/theme';
+import { CONTACT_EMAIL } from './Contact';
 
 interface NavLinkItem {
   label: string;
@@ -132,7 +133,7 @@ const MENUS: MegaMenuSection[] = [
       ],
     },
     footerLinks: [
-      { label: 'hello@gridpulse.io', href: 'mailto:hello@gridpulse.io' },
+      { label: CONTACT_EMAIL, href: `mailto:${CONTACT_EMAIL}` },
       { label: 'Open control room', href: '/login', route: true },
     ],
     secondary: [

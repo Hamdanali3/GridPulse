@@ -1329,27 +1329,89 @@ BEGIN
     v_work_orders_due := COALESCE((v_data->'work_orders'->>'due_this_week')::int, 4);
 
     -- ========================================================================
-    -- CASE 1: Identity / Who Built You / Who Created You / Greetings
+    -- 1. CONVERSATIONAL: GRATITUDE & PLEASANTRIES
     -- ========================================================================
-    IF v_lower ~ '(who (build|built|created|made|developed)|creator|author|who are you|what is your name|hello\b|hi\b|hey\b|greetings|good morning|good evening)' THEN
+    IF v_lower ~ '\y(thank|thanks|thx|appreciate|great job|good job|well done|excellent)\y' THEN
+        v_summary := 'You are very welcome! I am here 24/7 to assist with Chitral generation monitoring, alert triage across our 29 assets, and maintenance work orders. '
+            || 'Telemetry continues updating live every 5 seconds with ' || v_cur_output_mw::text || ' MW active generation across the district. Let me know if you need any asset diagnostics or reports!';
+        v_kpis := jsonb_build_array(
+            jsonb_build_object('label', 'Live Output', 'value', v_cur_output_mw::text || ' MW', 'trend', 'up'),
+            jsonb_build_object('label', 'Fleet Status', 'value', 'Stable', 'trend', 'up'),
+            jsonb_build_object('label', 'Capacity Factor', 'value', v_cf_pct::text || '%', 'trend', 'up'),
+            jsonb_build_object('label', 'Availability', 'value', v_avail_pct::text || '%', 'trend', 'neutral')
+        );
+        v_links := jsonb_build_array(
+            jsonb_build_object('label', 'Sites Overview', 'route', '/sites'),
+            jsonb_build_object('label', 'Alerts Triage', 'route', '/alerts'),
+            jsonb_build_object('label', 'Generation Reports', 'route', '/reports')
+        );
+        v_followups := jsonb_build_array(
+            'What is the fleet status today?',
+            'Show open critical alerts',
+            'How many plants in Chitral currently?'
+        );
+
+    -- ========================================================================
+    -- 2. CONVERSATIONAL: GOODBYE & LOGOUT ASSISTANCE
+    -- ========================================================================
+    ELSIF v_lower ~ '\y(bye|goodbye|see you|farewell|cya|take care)\y' THEN
+        v_summary := 'Goodbye! Chitral renewable fleet telemetry will continue updating live every 5 seconds. '
+            || 'Have a productive shift, and feel free to reopen PulseBot whenever you need operational insights!';
+        v_kpis := jsonb_build_array(
+            jsonb_build_object('label', 'Live Fleet Output', 'value', v_cur_output_mw::text || ' MW', 'trend', 'up'),
+            jsonb_build_object('label', 'Open Alerts', 'value', v_open_alerts::text || ' Open', 'trend', 'down')
+        );
+        v_links := jsonb_build_array(
+            jsonb_build_object('label', 'Sites Overview', 'route', '/sites'),
+            jsonb_build_object('label', 'Reports', 'route', '/reports')
+        );
+        v_followups := jsonb_build_array(
+            'What is the fleet status today?',
+            'Show open critical alerts'
+        );
+
+    -- ========================================================================
+    -- 3. CONVERSATIONAL: HOW ARE YOU
+    -- ========================================================================
+    ELSIF v_lower ~ '\y(how are you|how are things|how do you do|everything okay)\y' THEN
+        v_summary := 'All systems operational! PulseBot is monitoring 11 renewable energy generation plants across Chitral district in real time. '
+            || 'Currently, ' || v_cur_output_mw::text || ' MW is being generated (' || v_cf_pct::text || '% capacity factor) with ' || v_avail_pct::text || '% availability across 29 turbine and inverter assets. '
+            || 'How can I assist your operational tasks today?';
+        v_kpis := jsonb_build_array(
+            jsonb_build_object('label', 'Live Output', 'value', v_cur_output_mw::text || ' MW', 'trend', 'up'),
+            jsonb_build_object('label', 'Telemetry Stream', 'value', 'Healthy (5s)', 'trend', 'up'),
+            jsonb_build_object('label', 'Capacity Factor', 'value', v_cf_pct::text || '%', 'trend', 'up'),
+            jsonb_build_object('label', 'Availability', 'value', v_avail_pct::text || '%', 'trend', 'neutral')
+        );
+        v_links := jsonb_build_array(
+            jsonb_build_object('label', 'Sites Overview', 'route', '/sites'),
+            jsonb_build_object('label', 'Alerts Triage', 'route', '/alerts')
+        );
+        v_followups := jsonb_build_array(
+            'What is the fleet status today?',
+            'Show open critical alerts',
+            'How many plants in Chitral currently?'
+        );
+
+    -- ========================================================================
+    -- 4. CONVERSATIONAL: IDENTITY / CREATOR / GREETINGS
+    -- ========================================================================
+    ELSIF v_lower ~ '(who (build|built|created|made|developed)|creator|author|who are you|what is your name|\y(hello|hi|hey|greetings|good morning|good evening|good afternoon)\y)' THEN
         v_summary := 'I am PulseBot, the visual AI operations copilot for GridPulse Chitral, built and created by the GridPulse engineering team. '
             || 'I monitor 11 renewable energy generation plants (7 hydro, 3 solar, 1 wind) totaling 190.4 MW installed capacity across Upper and Lower Chitral, '
             || 'providing high-altitude SCADA telemetry, automated alert triage across 29 generating assets, and maintenance work orders. '
             || 'Currently, our fleet is producing ' || v_cur_output_mw::text || ' MW (' || v_cf_pct::text || '% capacity factor) with ' || v_avail_pct::text || '% fleet availability. How can I assist your operations today?';
-
         v_kpis := jsonb_build_array(
             jsonb_build_object('label', 'Live Fleet Output', 'value', v_cur_output_mw::text || ' MW', 'trend', 'up'),
             jsonb_build_object('label', 'Total Capacity', 'value', v_cap_mw::text || ' MW', 'trend', 'neutral'),
             jsonb_build_object('label', 'Monitored Sites', 'value', '11 Plants', 'trend', 'neutral'),
             jsonb_build_object('label', 'Fleet Availability', 'value', v_avail_pct::text || '%', 'trend', 'up')
         );
-
         v_links := jsonb_build_array(
             jsonb_build_object('label', 'Sites Overview', 'route', '/sites'),
             jsonb_build_object('label', 'Generation Reports', 'route', '/reports'),
             jsonb_build_object('label', 'Alerts Triage', 'route', '/alerts')
         );
-
         v_followups := jsonb_build_array(
             'How many plants in Chitral currently?',
             'Which plants are producing least today, and are any offline or in maintenance?',
@@ -1357,9 +1419,544 @@ BEGIN
         );
 
     -- ========================================================================
-    -- CASE 2: Technical Concepts (Capacity Factor, Availability, Run-of-River)
+    -- 5. ROLE BOUNDARIES & MUTATIONS (Viewer/Engineer requesting Admin actions)
+    -- Must be placed BEFORE plant cases so 'Delete Lawi' triggers boundary check!
     -- ========================================================================
-    ELSIF v_lower ~ '(what is (capacity factor|availability|efficiency|run-of-river|microgrid|scada)|explain (capacity factor|availability|efficiency|run-of-river|microgrid))' THEN
+    ELSIF v_lower ~ '(delete|edit site|create site|add site|modify site|change role)' AND p_role <> 'admin' THEN
+        v_summary := 'As ' || CASE WHEN p_role = 'engineer' THEN 'an Engineer' WHEN p_role = 'admin' THEN 'an Administrator' ELSE 'a Viewer' END || ', your account has ' || CASE WHEN p_role = 'engineer' THEN 'field operational access (alert triage, work orders)' ELSE 'read-only access' END || '. '
+            || 'Modifying site infrastructure, adding/deleting assets, managing team roles, and inspecting the administrative audit log require Administrator privileges. '
+            || 'You can view live operational telemetries on Sites Overview and download reports.';
+        v_kpis := jsonb_build_array(
+            jsonb_build_object('label', 'Your Role', 'value', INITCAP(p_role), 'trend', 'neutral'),
+            jsonb_build_object('label', 'Live Fleet Output', 'value', v_cur_output_mw::text || ' MW', 'trend', 'up'),
+            jsonb_build_object('label', 'Open Alerts', 'value', v_open_alerts::text || ' Open', 'trend', 'down')
+        );
+        v_links := jsonb_build_array(
+            jsonb_build_object('label', 'Sites Overview', 'route', '/sites'),
+            jsonb_build_object('label', 'Reports', 'route', '/reports')
+        );
+        v_followups := jsonb_build_array(
+            'What is the fleet status today?',
+            'Show open critical alerts',
+            'How many plants in Chitral currently?'
+        );
+
+    -- ========================================================================
+    -- 6. PERSONNEL: HAMDAN ALI (ADMIN)
+    -- ========================================================================
+    ELSIF v_lower ~ '\y(hamdan|hamdan ali)\y' THEN
+        v_summary := 'Hamdan Ali is the Chief Operations Administrator for GridPulse Chitral. '
+            || 'He manages fleet-wide infrastructure access, oversees system security audit logging, administers user role permissions, '
+            || 'and coordinates regional energy dispatch strategies across Upper and Lower Chitral.';
+        v_kpis := jsonb_build_array(
+            jsonb_build_object('label', 'User', 'value', 'Hamdan Ali', 'trend', 'neutral'),
+            jsonb_build_object('label', 'Role', 'value', 'System Administrator', 'trend', 'neutral'),
+            jsonb_build_object('label', 'Access Level', 'value', 'Full Privileges', 'trend', 'up')
+        );
+        v_links := jsonb_build_array(
+            jsonb_build_object('label', 'Team Roster', 'route', '/team'),
+            jsonb_build_object('label', 'Audit Log', 'route', '/audit')
+        );
+        v_followups := jsonb_build_array(
+            'List the operations team',
+            'Who did what recently in audit log?',
+            'What is the fleet status today?'
+        );
+
+    -- ========================================================================
+    -- 7. PERSONNEL: SHAHZADA IQBAL (LEAD ENGINEER)
+    -- ========================================================================
+    ELSIF v_lower ~ '\y(shahzada|shahzada iqbal)\y' THEN
+        v_summary := 'Shahzada Iqbal is the Lead Field Operations Engineer for GridPulse Chitral. '
+            || 'He is currently leading on-site diagnostic investigations for Reshun Hydropower Unit 02 (runner fault under Work Order #3) '
+            || 'and supervising inverter synchronization maintenance at Shandur Wind Pilot (Work Order #4).';
+        v_kpis := jsonb_build_array(
+            jsonb_build_object('label', 'Engineer', 'value', 'Shahzada Iqbal', 'trend', 'neutral'),
+            jsonb_build_object('label', 'Role', 'value', 'Lead Field Engineer', 'trend', 'neutral'),
+            jsonb_build_object('label', 'Assigned Work', 'value', '2 High-Priority Tasks', 'trend', 'down')
+        );
+        v_links := jsonb_build_array(
+            jsonb_build_object('label', 'Work Orders', 'route', '/work-orders'),
+            jsonb_build_object('label', 'Alerts Triage', 'route', '/alerts')
+        );
+        v_followups := jsonb_build_array(
+            'What is wrong with Reshun Unit 02?',
+            'Show work orders due this week',
+            'Show open critical alerts'
+        );
+
+    -- ========================================================================
+    -- 8. PERSONNEL: SADIA REHMAN (VIEWER / ANALYST)
+    -- ========================================================================
+    ELSIF v_lower ~ '\y(sadia|sadia rehman)\y' THEN
+        v_summary := 'Sadia Rehman is an Operations Viewer and Generation Data Analyst for GridPulse Chitral. '
+            || 'She analyzes daily generation yields, tracks capacity factors across hydro and solar assets, and generates executive energy dispatch reports for district stakeholders.';
+        v_kpis := jsonb_build_array(
+            jsonb_build_object('label', 'Analyst', 'value', 'Sadia Rehman', 'trend', 'neutral'),
+            jsonb_build_object('label', 'Role', 'value', 'Operations Viewer', 'trend', 'neutral'),
+            jsonb_build_object('label', 'Reporting Scope', 'value', 'Analytics & Reports', 'trend', 'up')
+        );
+        v_links := jsonb_build_array(
+            jsonb_build_object('label', 'Generation Reports', 'route', '/reports'),
+            jsonb_build_object('label', 'Sites Overview', 'route', '/sites')
+        );
+        v_followups := jsonb_build_array(
+            'How do I export a report?',
+            'What is the fleet status today?',
+            'How many plants in Chitral currently?'
+        );
+
+    -- ========================================================================
+    -- 9. PLATFORM FEATURE: EXPORT / DOWNLOAD / CSV / PDF
+    -- ========================================================================
+    ELSIF v_lower ~ '\y(export|download|csv|pdf|excel|extract data|download report)\y' THEN
+        v_summary := 'To export operational telemetry and generation records, navigate to the Reports console (/reports). '
+            || 'You can filter generation history by technology (Hydro, Solar, Wind), select custom date intervals (Today, Last 7 Days, Month to Date), '
+            || 'and click "Download CSV" or "Export Summary" for compliance, tariff accounting, and maintenance audits.';
+        v_kpis := jsonb_build_array(
+            jsonb_build_object('label', 'Export Format', 'value', 'CSV / Structured Data', 'trend', 'neutral'),
+            jsonb_build_object('label', 'Telemetry Interval', 'value', '1-Min & Hourly', 'trend', 'neutral'),
+            jsonb_build_object('label', 'Reports Route', 'value', '/reports', 'trend', 'up')
+        );
+        v_links := jsonb_build_array(
+            jsonb_build_object('label', 'Reports Console', 'route', '/reports'),
+            jsonb_build_object('label', 'Sites Overview', 'route', '/sites')
+        );
+        v_followups := jsonb_build_array(
+            'What is the fleet status today?',
+            'How many plants in Chitral currently?',
+            'Show open critical alerts'
+        );
+
+    -- ========================================================================
+    -- 10. PLATFORM FEATURE: SETTINGS / THEME / DARK MODE / LOGOUT
+    -- ========================================================================
+    ELSIF v_lower ~ '\y(settings|dark mode|light mode|theme|password|profile|preferences)\y' THEN
+        v_summary := 'You can configure your personal profile, adjust high-altitude dashboard display themes (Light Mode / Dark Mode), '
+            || 'and view telemetry notification preferences by navigating to Settings (/settings) from the left navigation sidebar.';
+        v_links := jsonb_build_array(
+            jsonb_build_object('label', 'Open Settings', 'route', '/settings'),
+            jsonb_build_object('label', 'Sites Overview', 'route', '/sites')
+        );
+        v_followups := jsonb_build_array(
+            'What is the fleet status today?',
+            'How many plants in Chitral currently?'
+        );
+
+    ELSIF v_lower ~ '\y(logout|log out|sign out|signout)\y' THEN
+        v_summary := 'To sign out of your current GridPulse session, click the "Log out" button located at the bottom of the left navigation sidebar. '
+            || 'This will securely invalidate your active authentication session.';
+        v_links := jsonb_build_array(
+            jsonb_build_object('label', 'Sites Overview', 'route', '/sites')
+        );
+        v_followups := jsonb_build_array(
+            'What is the fleet status today?'
+        );
+
+    -- ========================================================================
+    -- 11. SPECIFIC PLANT: GOLEN GOL HYDROPOWER (108 MW)
+    -- ========================================================================
+    ELSIF v_lower ~ '\y(golen|golen gol)\y' THEN
+        v_summary := 'Golen Gol Hydropower Plant is Chitral''s flagship generation facility with 108.0 MW installed capacity (3 x 36 MW Pelton turbine units: GEN-101, GEN-102, GEN-103). '
+            || 'Located in Lower Chitral along the Golen Gol river, it operates as a high-head run-of-river facility. '
+            || 'Currently, all 3 units are online and generating 88.7 MW (82.1% capacity factor), providing 68% of total live generation output in the district.';
+        v_kpis := jsonb_build_array(
+            jsonb_build_object('label', 'Current Output', 'value', '88.7 MW', 'trend', 'up'),
+            jsonb_build_object('label', 'Capacity', 'value', '108.0 MW', 'trend', 'neutral'),
+            jsonb_build_object('label', 'Capacity Factor', 'value', '82.1%', 'trend', 'up'),
+            jsonb_build_object('label', 'Active Units', 'value', '3 of 3 Online', 'trend', 'up')
+        );
+        v_visuals := jsonb_build_array(
+            jsonb_build_object(
+                'type', 'table',
+                'caption', 'Golen Gol Hydropower Generating Units',
+                'columns', jsonb_build_array('Unit Tag', 'Turbine Type', 'Rated (MW)', 'Live Output', 'Efficiency', 'Status'),
+                'rows', jsonb_build_array(
+                    jsonb_build_array('GEN-101', 'Pelton (Vertical)', 36.0, '29.6 MW', '92.4%', 'Online'),
+                    jsonb_build_array('GEN-102', 'Pelton (Vertical)', 36.0, '29.8 MW', '92.6%', 'Online'),
+                    jsonb_build_array('GEN-103', 'Pelton (Vertical)', 36.0, '29.3 MW', '92.1%', 'Online')
+                )
+            )
+        );
+        v_links := jsonb_build_array(
+            jsonb_build_object('label', 'Sites Overview', 'route', '/sites'),
+            jsonb_build_object('label', 'Generation Reports', 'route', '/reports')
+        );
+        v_followups := jsonb_build_array(
+            'Tell me about Lawi Hydropower',
+            'How many plants in Chitral currently?',
+            'Which plants are producing least today?'
+        );
+
+    -- ========================================================================
+    -- 12. SPECIFIC PLANT: LAWI HYDROPOWER (69 MW)
+    -- ========================================================================
+    ELSIF v_lower ~ '\ylawi\y' THEN
+        v_summary := 'Lawi Hydropower Plant is Chitral''s second largest generation station, situated near Drosh in Lower Chitral with 69.0 MW installed capacity (3 x 23 MW Francis turbine units: GEN-201, GEN-202, GEN-203). '
+            || 'Lawi is currently in Scheduled Maintenance Overhaul for annual penstock valve and canal desiltation; '
+            || 'it is operating partially and delivering 37.1 MW (53.8% capacity factor) into the 132 kV transmission interconnection.';
+        v_kpis := jsonb_build_array(
+            jsonb_build_object('label', 'Current Output', 'value', '37.1 MW', 'trend', 'down'),
+            jsonb_build_object('label', 'Capacity', 'value', '69.0 MW', 'trend', 'neutral'),
+            jsonb_build_object('label', 'Operational State', 'value', 'Partial Maintenance', 'trend', 'down'),
+            jsonb_build_object('label', 'Plant Status', 'value', 'Maintenance', 'trend', 'down')
+        );
+        v_links := jsonb_build_array(
+            jsonb_build_object('label', 'Sites Overview', 'route', '/sites'),
+            jsonb_build_object('label', 'Work Orders', 'route', '/work-orders'),
+            jsonb_build_object('label', 'Alerts Triage', 'route', '/alerts')
+        );
+        v_followups := jsonb_build_array(
+            'Tell me about Golen Gol',
+            'Show work orders due this week',
+            'Which plants are producing least today?'
+        );
+
+    -- ========================================================================
+    -- 13. SPECIFIC PLANT: RESHUN HYDROPOWER & UNIT 02 (4.2 MW)
+    -- ========================================================================
+    ELSIF v_lower ~ '\yreshun\y' OR v_lower ~ '(wrong with.*(reshun|unit)|reshun.*(unit|02|fault))' THEN
+        v_summary := 'Reshun Hydropower Plant is a 4.2 MW run-of-river facility in Upper Chitral (2 x 2.1 MW Pelton units: GEN-301 and GEN-302). '
+            || 'Reshun Unit 02 (GEN-302) is currently OFFLINE and not generating due to a runner mechanical fault. '
+            || 'This is an acknowledged Critical alert covered by active Work Order #3 ("Reshun Unit 02 Runner Inspection") assigned to Lead Field Engineer Shahzada Iqbal. '
+            || 'Reshun Unit 01 remains online and stable, producing 1.69 MW (~40.1% plant capacity factor).';
+        v_kpis := jsonb_build_array(
+            jsonb_build_object('label', 'Current Output', 'value', '1.69 MW', 'trend', 'down'),
+            jsonb_build_object('label', 'Capacity', 'value', '4.2 MW', 'trend', 'neutral'),
+            jsonb_build_object('label', 'Reshun Unit 02', 'value', 'Offline (Critical)', 'trend', 'down'),
+            jsonb_build_object('label', 'Work Order #3', 'value', 'Shahzada Iqbal', 'trend', 'neutral')
+        );
+        v_visuals := jsonb_build_array(
+            jsonb_build_object(
+                'type', 'table',
+                'caption', 'Reshun Hydropower Unit Diagnostics',
+                'columns', jsonb_build_array('Asset Tag', 'Unit Name', 'Rated (MW)', 'Current Output', 'Status', 'Work Order'),
+                'rows', jsonb_build_array(
+                    jsonb_build_array('GEN-301', 'Reshun Unit 01', 2.1, '1.69 MW', 'Online', 'None'),
+                    jsonb_build_array('GEN-302', 'Reshun Unit 02', 2.1, '0.0 kW', 'Offline (Critical Fault)', 'WO #3 (In Progress)')
+                )
+            )
+        );
+        v_links := jsonb_build_array(
+            jsonb_build_object('label', 'Alerts Triage', 'route', '/alerts'),
+            jsonb_build_object('label', 'Work Orders', 'route', '/work-orders'),
+            jsonb_build_object('label', 'Sites Overview', 'route', '/sites')
+        );
+        v_followups := jsonb_build_array(
+            'Show open critical alerts',
+            'Show work orders due this week',
+            'What should I fix first?'
+        );
+
+    -- ========================================================================
+    -- 14. SPECIFIC PLANT: SHISHI HYDROPOWER (1.8 MW)
+    -- ========================================================================
+    ELSIF v_lower ~ '\yshishi\y' THEN
+        v_summary := 'Shishi Hydropower Plant is a 1.8 MW run-of-river station in Shishi Koh valley, Lower Chitral (2 x 0.9 MW Crossflow units: GEN-401, GEN-402). '
+            || 'Both units are operating normally, delivering 1.50 MW (83.3% capacity factor) into the local valley distribution grid.';
+        v_kpis := jsonb_build_array(
+            jsonb_build_object('label', 'Current Output', 'value', '1.50 MW', 'trend', 'up'),
+            jsonb_build_object('label', 'Capacity', 'value', '1.80 MW', 'trend', 'neutral'),
+            jsonb_build_object('label', 'Status', 'value', 'Online (Normal)', 'trend', 'up'),
+            jsonb_build_object('label', 'Capacity Factor', 'value', '83.3%', 'trend', 'up')
+        );
+        v_links := jsonb_build_array(
+            jsonb_build_object('label', 'Sites Overview', 'route', '/sites'),
+            jsonb_build_object('label', 'Generation Reports', 'route', '/reports')
+        );
+        v_followups := jsonb_build_array(
+            'How many plants in Chitral currently?',
+            'What is the fleet status today?'
+        );
+
+    -- ========================================================================
+    -- 15. SPECIFIC PLANT: CHITRAL TOWN HYDRO (1.0 MW, DEGRADED)
+    -- ========================================================================
+    ELSIF v_lower ~ '\ychitral town\y' THEN
+        v_summary := 'Chitral Town Hydro is a 1.0 MW municipal generation facility in Lower Chitral (2 x 500 kW Francis units: GEN-501, GEN-502). '
+            || 'The plant is currently operating in Degraded status: total output is 440.2 kW (44.0% capacity factor). '
+            || 'Both units have active Warning alerts due to turbine runner silt accumulation, with conversion efficiencies down to 66.7% and 64.7% (operational threshold 70.0%).';
+        v_kpis := jsonb_build_array(
+            jsonb_build_object('label', 'Current Output', 'value', '440.2 kW', 'trend', 'down'),
+            jsonb_build_object('label', 'Capacity', 'value', '1.0 MW', 'trend', 'neutral'),
+            jsonb_build_object('label', 'Status', 'value', 'Degraded (Warning)', 'trend', 'down'),
+            jsonb_build_object('label', 'Unit 01 / 02 Eff.', 'value', '66.7% / 64.7%', 'trend', 'down')
+        );
+        v_links := jsonb_build_array(
+            jsonb_build_object('label', 'Alerts Triage', 'route', '/alerts'),
+            jsonb_build_object('label', 'Sites Overview', 'route', '/sites')
+        );
+        v_followups := jsonb_build_array(
+            'Show open critical alerts',
+            'Which plants are producing least today, and are any offline or in maintenance?'
+        );
+
+    -- ========================================================================
+    -- 16. SPECIFIC PLANT: BUMBURET MICRO-HYDRO (0.8 MW, KALASH)
+    -- ========================================================================
+    ELSIF v_lower ~ '\y(bumburet|kalash)\y' THEN
+        v_summary := 'Bumburet Micro-Hydro is a 0.8 MW community station located in the scenic Kalash Valleys (2 x 400 kW Turgo units: GEN-601, GEN-602). '
+            || 'It powers local indigenous microgrids in Bumburet, Rumbur, and Birir. '
+            || 'Currently operating normally at 710 kW (88.7% capacity factor) with clear autumn stream flows.';
+        v_kpis := jsonb_build_array(
+            jsonb_build_object('label', 'Current Output', 'value', '710.0 kW', 'trend', 'up'),
+            jsonb_build_object('label', 'Capacity', 'value', '800.0 kW', 'trend', 'neutral'),
+            jsonb_build_object('label', 'Status', 'value', 'Online', 'trend', 'up'),
+            jsonb_build_object('label', 'Region', 'value', 'Kalash Valleys', 'trend', 'neutral')
+        );
+        v_links := jsonb_build_array(
+            jsonb_build_object('label', 'Sites Overview', 'route', '/sites')
+        );
+        v_followups := jsonb_build_array(
+            'How many plants in Chitral currently?',
+            'What is the fleet status today?'
+        );
+
+    -- ========================================================================
+    -- 17. SPECIFIC PLANT: GARAM CHASHMA MICRO-HYDRO (0.5 MW, LOTKOH)
+    -- ========================================================================
+    ELSIF v_lower ~ '\y(garam chashma|lotkoh)\y' THEN
+        v_summary := 'Garam Chashma Micro-Hydro is a 0.5 MW mountain station in the geothermal Lotkoh valley of Lower Chitral (1 x 500 kW Pelton unit: GEN-701). '
+            || 'It operates reliably in cold weather thanks to geothermal surface water tempering, currently outputting 420.0 kW (84.0% capacity factor).';
+        v_kpis := jsonb_build_array(
+            jsonb_build_object('label', 'Current Output', 'value', '420.0 kW', 'trend', 'up'),
+            jsonb_build_object('label', 'Capacity', 'value', '500.0 kW', 'trend', 'neutral'),
+            jsonb_build_object('label', 'Status', 'value', 'Online', 'trend', 'up')
+        );
+        v_links := jsonb_build_array(
+            jsonb_build_object('label', 'Sites Overview', 'route', '/sites')
+        );
+        v_followups := jsonb_build_array(
+            'How many plants in Chitral currently?',
+            'What is the fleet status today?'
+        );
+
+    -- ========================================================================
+    -- 18. SPECIFIC PLANT: MASTUJ SOLAR PARK & INVERTER OVERHEAT (2.0 MW)
+    -- ========================================================================
+    ELSIF v_lower ~ '\ymastuj\y' OR v_lower ~ '(inverter.*(hot|overheat|temp|warm)|overheating)' THEN
+        v_summary := 'Mastuj Solar Park is a 2.0 MW photovoltaic installation in Upper Chitral (4 x 500 kW string inverters: INV-101, 102, 103, 104). '
+            || 'Nighttime generation is currently 0 kW pending sunrise (06:35 PKT). '
+            || 'Telemetry Warning: Inverter 03 (INV-103) is running hot at 65.4 °C (operational threshold 65.0 °C), and its conversion efficiency has dropped to 69.4% (limit 70.0%). '
+            || 'Field maintenance Work Order #2 is scheduled for heat sink descaling and dust filter replacement.';
+        v_kpis := jsonb_build_array(
+            jsonb_build_object('label', 'Mastuj INV-103', 'value', '65.4 °C (Overheat)', 'trend', 'down'),
+            jsonb_build_object('label', 'Efficiency', 'value', '69.4% (Low)', 'trend', 'down'),
+            jsonb_build_object('label', 'Park Capacity', 'value', '2.0 MW (Solar)', 'trend', 'neutral'),
+            jsonb_build_object('label', 'Night Generation', 'value', '0.0 kW', 'trend', 'neutral')
+        );
+        v_links := jsonb_build_array(
+            jsonb_build_object('label', 'Alerts Triage', 'route', '/alerts'),
+            jsonb_build_object('label', 'Work Orders', 'route', '/work-orders'),
+            jsonb_build_object('label', 'Sites Overview', 'route', '/sites')
+        );
+        v_followups := jsonb_build_array(
+            'Show open critical alerts',
+            'Show work orders due this week',
+            'Tell me about solar power in Chitral'
+        );
+
+    -- ========================================================================
+    -- 19. SPECIFIC PLANT: BOONI SOLAR FIELD (1.5 MW)
+    -- ========================================================================
+    ELSIF v_lower ~ '\ybooni\y' THEN
+        v_summary := 'Booni Solar Field is a 1.5 MW grid-tied solar farm situated on the Booni plateau in Upper Chitral (3 x 500 kW inverters: INV-201, 202, 203). '
+            || 'All inverters are healthy with zero alarms. Generation is currently 0 kW during nighttime hours and will ramp following sunrise at 06:35 PKT.';
+        v_kpis := jsonb_build_array(
+            jsonb_build_object('label', 'Capacity', 'value', '1.5 MW', 'trend', 'neutral'),
+            jsonb_build_object('label', 'Night Output', 'value', '0.0 kW', 'trend', 'neutral'),
+            jsonb_build_object('label', 'Status', 'value', 'Online (Night)', 'trend', 'neutral'),
+            jsonb_build_object('label', 'Inverters', 'value', '3 Healthy', 'trend', 'up')
+        );
+        v_links := jsonb_build_array(
+            jsonb_build_object('label', 'Sites Overview', 'route', '/sites')
+        );
+        v_followups := jsonb_build_array(
+            'Tell me about solar power in Chitral',
+            'How many plants in Chitral currently?'
+        );
+
+    -- ========================================================================
+    -- 20. SPECIFIC PLANT: DROSH SOLAR ARRAY (1.0 MW)
+    -- ========================================================================
+    ELSIF v_lower ~ '\ydrosh\y' THEN
+        v_summary := 'Drosh Solar Array is a 1.0 MW solar installation in Lower Chitral (2 x 500 kW inverters: INV-301, 302). '
+            || 'It feeds daytime peak shaving power directly to the Drosh industrial feeder. Nighttime generation is 0 kW pending sunrise at 06:35 PKT.';
+        v_kpis := jsonb_build_array(
+            jsonb_build_object('label', 'Capacity', 'value', '1.0 MW', 'trend', 'neutral'),
+            jsonb_build_object('label', 'Night Output', 'value', '0.0 kW', 'trend', 'neutral'),
+            jsonb_build_object('label', 'Status', 'value', 'Online (Night)', 'trend', 'neutral')
+        );
+        v_links := jsonb_build_array(
+            jsonb_build_object('label', 'Sites Overview', 'route', '/sites')
+        );
+        v_followups := jsonb_build_array(
+            'Tell me about solar power in Chitral',
+            'How many plants in Chitral currently?'
+        );
+
+    -- ========================================================================
+    -- 21. SPECIFIC PLANT: SHANDUR WIND PILOT & TURBINE 01 (0.6 MW)
+    -- ========================================================================
+    ELSIF v_lower ~ '\y(shandur|wind pilot)\y' THEN
+        v_summary := 'Shandur Wind Pilot is Pakistan''s highest wind generation facility with 0.6 MW installed capacity (2 x 300 kW alpine wind turbines: WT-101, WT-102), '
+            || 'perched at 3,700 meters elevation on Shandur Pass. '
+            || 'Currently, the site is generating 29.1 kW (4.9% capacity factor) under low mountain breeze. '
+            || 'Turbine 01 (WT-101) has an active Warning alert for intermittent zero-output reporting; '
+            || 'active Work Order #4 is blocked awaiting contactor relay replacement parts shipped from Peshawar.';
+        v_kpis := jsonb_build_array(
+            jsonb_build_object('label', 'Current Output', 'value', '29.1 kW', 'trend', 'down'),
+            jsonb_build_object('label', 'Capacity', 'value', '0.6 MW (600 kW)', 'trend', 'neutral'),
+            jsonb_build_object('label', 'Elevation', 'value', '3,700m (Shandur)', 'trend', 'neutral'),
+            jsonb_build_object('label', 'Turbine 01 Status', 'value', 'Blocked Part (WO #4)', 'trend', 'down')
+        );
+        v_links := jsonb_build_array(
+            jsonb_build_object('label', 'Alerts Triage', 'route', '/alerts'),
+            jsonb_build_object('label', 'Work Orders', 'route', '/work-orders'),
+            jsonb_build_object('label', 'Sites Overview', 'route', '/sites')
+        );
+        v_followups := jsonb_build_array(
+            'Show open critical alerts',
+            'Show work orders due this week',
+            'Which plants are producing least today?'
+        );
+
+    -- ========================================================================
+    -- 22. TECHNOLOGY: SOLAR POWER IN CHITRAL
+    -- ========================================================================
+    ELSIF v_lower ~ '\y(solar|photovoltaic|pv parks?)\y' THEN
+        v_summary := 'Chitral hosts 3 grid-tied solar PV parks totaling 4.5 MW installed capacity: '
+            || 'Mastuj Solar Park (2.0 MW, 4 inverters in Upper Chitral), '
+            || 'Booni Solar Field (1.5 MW, 3 inverters on Booni plateau), '
+            || 'and Drosh Solar Array (1.0 MW, 2 inverters in Lower Chitral). '
+            || 'Nighttime generation is currently 0 kW across all 3 solar sites. '
+            || 'High altitude provides intense solar irradiance and cold alpine temperatures that enhance PV panel conversion efficiency during daylight hours (06:35 to 17:17 PKT).';
+        v_kpis := jsonb_build_array(
+            jsonb_build_object('label', 'Solar Capacity', 'value', '4.5 MW (3 Parks)', 'trend', 'neutral'),
+            jsonb_build_object('label', 'Night Generation', 'value', '0.0 kW', 'trend', 'neutral'),
+            jsonb_build_object('label', 'Solar Window', 'value', '06:35 - 17:17 PKT', 'trend', 'neutral'),
+            jsonb_build_object('label', 'Open Solar Alerts', 'value', '2 Warnings (Mastuj)', 'trend', 'down')
+        );
+        v_links := jsonb_build_array(
+            jsonb_build_object('label', 'Sites Overview', 'route', '/sites'),
+            jsonb_build_object('label', 'Alerts Triage', 'route', '/alerts')
+        );
+        v_followups := jsonb_build_array(
+            'Which inverters are overheating?',
+            'How many plants in Chitral currently?',
+            'Which plants are producing least today, and are any offline or in maintenance?'
+        );
+
+    -- ========================================================================
+    -- 23. TECHNOLOGY: HYDRO POWER IN CHITRAL
+    -- ========================================================================
+    ELSIF v_lower ~ '\y(hydro|hydropower|hydroelectric|penstock|turbines?)\y' THEN
+        v_summary := 'Hydroelectric generation is the backbone of Chitral''s energy independence, comprising 7 run-of-river stations totaling 185.3 MW (97.3% of district capacity). '
+            || 'Major producers include Golen Gol (108 MW, currently generating 88.7 MW) and Lawi (69 MW, delivering 37.1 MW during maintenance overhaul). '
+            || 'Smaller mountain run-of-river sites include Reshun (4.2 MW), Shishi (1.8 MW), Chitral Town (1.0 MW degraded), Bumburet (0.8 MW), and Garam Chashma (0.5 MW). '
+            || 'Hydro facilities currently supply 99.9% of total district load.';
+        v_kpis := jsonb_build_array(
+            jsonb_build_object('label', 'Hydro Capacity', 'value', '185.3 MW (7 Plants)', 'trend', 'neutral'),
+            jsonb_build_object('label', 'Live Hydro Output', 'value', v_cur_output_mw::text || ' MW', 'trend', 'up'),
+            jsonb_build_object('label', 'Grid Share', 'value', '99.9% of District', 'trend', 'up'),
+            jsonb_build_object('label', 'Hydro Availability', 'value', '86.2%', 'trend', 'neutral')
+        );
+        v_links := jsonb_build_array(
+            jsonb_build_object('label', 'Sites Overview', 'route', '/sites'),
+            jsonb_build_object('label', 'Generation Reports', 'route', '/reports')
+        );
+        v_followups := jsonb_build_array(
+            'Tell me about Golen Gol',
+            'Tell me about Lawi Hydropower',
+            'What is wrong with Reshun Unit 02?'
+        );
+
+    -- ========================================================================
+    -- 24. TECHNOLOGY: WIND ENERGY IN CHITRAL
+    -- ========================================================================
+    ELSIF v_lower ~ '\y(wind|wind energy|wind turbine)\y' THEN
+        v_summary := 'Wind energy in Chitral is spearheaded by the Shandur Wind Pilot (0.6 MW / 600 kW), '
+            || 'situated at 3,700 meters elevation on Shandur Pass in Upper Chitral (2 x 300 kW cold-climate alpine turbines: WT-101, WT-102). '
+            || 'Current generation is 29.1 kW under light mountain winds. '
+            || 'Turbine 01 has an active contactor relay maintenance task (Work Order #4).';
+        v_kpis := jsonb_build_array(
+            jsonb_build_object('label', 'Wind Capacity', 'value', '0.6 MW (2 Turbines)', 'trend', 'neutral'),
+            jsonb_build_object('label', 'Current Output', 'value', '29.1 kW', 'trend', 'down'),
+            jsonb_build_object('label', 'Location', 'value', 'Shandur Pass (3,700m)', 'trend', 'neutral')
+        );
+        v_links := jsonb_build_array(
+            jsonb_build_object('label', 'Sites Overview', 'route', '/sites'),
+            jsonb_build_object('label', 'Work Orders', 'route', '/work-orders')
+        );
+        v_followups := jsonb_build_array(
+            'How many plants in Chitral currently?',
+            'What is the fleet status today?'
+        );
+
+    -- ========================================================================
+    -- 25. ADMIN ONLY: AUDIT LOG & SECURITY EVENTS
+    -- ========================================================================
+    ELSIF v_lower ~ '\y(audit|who did what|recent log|activity log|security log)\y' THEN
+        IF p_role = 'admin' THEN
+            v_summary := 'Recent administrative audit log events: Hamdan Ali (Admin) and Shahzada Iqbal (Engineer) recently performed system logins and work order status updates. '
+                || 'Alert #1 (Reshun Unit 02) was acknowledged and dispatched to Work Order #3. No security policy violations or unauthorized permission escalations recorded.';
+            v_kpis := jsonb_build_array(
+                jsonb_build_object('label', 'Audit Status', 'value', 'Normal (Verified)', 'trend', 'up'),
+                jsonb_build_object('label', 'Recent Events', 'value', 'Auth & Triage', 'trend', 'neutral'),
+                jsonb_build_object('label', 'Access Level', 'value', 'Admin Privileged', 'trend', 'neutral')
+            );
+            v_links := jsonb_build_array(
+                jsonb_build_object('label', 'Audit Log Console', 'route', '/audit'),
+                jsonb_build_object('label', 'Team Management', 'route', '/team')
+            );
+        ELSE
+            v_summary := 'As ' || CASE WHEN p_role = 'engineer' THEN 'an Engineer' WHEN p_role = 'admin' THEN 'an Administrator' ELSE 'a Viewer' END || ', your account has ' || CASE WHEN p_role = 'engineer' THEN 'field operations scope' ELSE 'read-only reporting scope' END || '. '
+                || 'The GridPulse administrative audit log and user activity trail require Administrator privileges.';
+            v_links := jsonb_build_array(
+                jsonb_build_object('label', 'Sites Overview', 'route', '/sites'),
+                jsonb_build_object('label', 'Reports', 'route', '/reports')
+            );
+        END IF;
+        v_followups := jsonb_build_array(
+            'What is the fleet status today?',
+            'Show open critical alerts',
+            'List the operations team'
+        );
+
+    -- ========================================================================
+    -- 26. ADMIN ONLY: TEAM ROSTER & WORKLOAD
+    -- ========================================================================
+    ELSIF v_lower ~ '\y(team|operations team|members|staff|who works|personnel)\y' THEN
+        IF p_role = 'admin' THEN
+            v_summary := 'GridPulse operations team roster: Hamdan Ali (Administrator - fleet oversight & security), '
+                || 'Shahzada Iqbal (Lead Field Engineer - currently assigned to 2 high-priority work orders including Reshun Unit 02), '
+                || 'and Sadia Rehman (Operations Viewer - monitoring and executive generation reporting).';
+            v_kpis := jsonb_build_array(
+                jsonb_build_object('label', 'Active Staff', 'value', '3 Members', 'trend', 'neutral'),
+                jsonb_build_object('label', 'Lead Engineer', 'value', 'Shahzada Iqbal', 'trend', 'neutral'),
+                jsonb_build_object('label', 'Field Workload', 'value', '2 Orders Assigned', 'trend', 'neutral')
+            );
+            v_links := jsonb_build_array(
+                jsonb_build_object('label', 'Team Management', 'route', '/team'),
+                jsonb_build_object('label', 'Work Orders', 'route', '/work-orders')
+            );
+        ELSE
+            v_summary := 'The Chitral generation operations team includes certified hydro engineers, electrical technicians, and SCADA monitoring dispatchers. Team role administration is restricted to Administrators.';
+            v_links := jsonb_build_array(
+                jsonb_build_object('label', 'Sites Overview', 'route', '/sites'),
+                jsonb_build_object('label', 'Reports', 'route', '/reports')
+            );
+        END IF;
+        v_followups := jsonb_build_array(
+            'Show overdue work orders',
+            'What should I fix first?',
+            'What is the fleet status today?'
+        );
+
+    -- ========================================================================
+    -- 27. TECHNICAL CONCEPTS (Capacity Factor, Availability, Run-of-River)
+    -- ========================================================================
+    ELSIF v_lower ~ '(what is (capacity factor|availability|efficiency|run-of-river|microgrid|scada)|explain (capacity factor|availability|efficiency|run-of-river|microgrid|scada))' THEN
         IF v_lower ~ 'capacity factor' THEN
             v_summary := 'Capacity factor is the ratio of actual electrical energy generated over a given period to the theoretical maximum output if the fleet operated at 100% continuous nameplate capacity. In Chitral, our 190.4 MW fleet currently operates at ' || v_cf_pct::text || '% capacity factor, led by run-of-river hydro (Golen Gol at 82.1%) with solar at 0% during night hours.';
         ELSIF v_lower ~ 'availability' THEN
@@ -1369,19 +1966,16 @@ BEGIN
         ELSE
             v_summary := 'GridPulse monitors high-altitude mountain micro-grids that balance isolated valleys in Upper and Lower Chitral using distributed hydro, solar, and wind assets.';
         END IF;
-
         v_kpis := jsonb_build_array(
             jsonb_build_object('label', 'Capacity Factor', 'value', v_cf_pct::text || '%', 'trend', 'up'),
             jsonb_build_object('label', 'Fleet Availability', 'value', v_avail_pct::text || '%', 'trend', 'up'),
             jsonb_build_object('label', 'Total Capacity', 'value', v_cap_mw::text || ' MW', 'trend', 'neutral'),
             jsonb_build_object('label', 'Active Units', 'value', '29 Assets', 'trend', 'neutral')
         );
-
         v_links := jsonb_build_array(
             jsonb_build_object('label', 'Sites Overview', 'route', '/sites'),
             jsonb_build_object('label', 'Generation Reports', 'route', '/reports')
         );
-
         v_followups := jsonb_build_array(
             'How many plants in Chitral currently?',
             'Which plants are producing least today, and are any offline or in maintenance?',
@@ -1389,49 +1983,21 @@ BEGIN
         );
 
     -- ========================================================================
-    -- CASE 3: Role Boundaries & Permissions (Viewer/Engineer requesting Admin actions)
-    -- ========================================================================
-    ELSIF v_lower ~ '(delete|edit site|create site|add site|modify|audit log|manage team|change role|who did what)' AND p_role <> 'admin' THEN
-        v_summary := 'As a ' || INITCAP(p_role) || ', your account has ' || CASE WHEN p_role = 'engineer' THEN 'field operational access (alert triage, work orders)' ELSE 'read-only access' END || '. '
-            || 'Modifying site infrastructure, adding/deleting assets, managing team roles, and inspecting the administrative audit log require Administrator privileges. '
-            || 'You can view live operational telemetries on Sites Overview and download reports.';
-
-        v_kpis := jsonb_build_array(
-            jsonb_build_object('label', 'Your Role', 'value', INITCAP(p_role), 'trend', 'neutral'),
-            jsonb_build_object('label', 'Live Fleet Output', 'value', v_cur_output_mw::text || ' MW', 'trend', 'up'),
-            jsonb_build_object('label', 'Open Alerts', 'value', v_open_alerts::text || ' Open', 'trend', 'down')
-        );
-
-        v_links := jsonb_build_array(
-            jsonb_build_object('label', 'Sites Overview', 'route', '/sites'),
-            jsonb_build_object('label', 'Reports', 'route', '/reports')
-        );
-
-        v_followups := jsonb_build_array(
-            'What is the fleet status today?',
-            'Show open critical alerts',
-            'How many plants in Chitral currently?'
-        );
-
-    -- ========================================================================
-    -- CASE 4: Weather / High-Altitude Mountain Environment
+    -- 28. WEATHER / HIGH-ALTITUDE MOUNTAIN ENVIRONMENT
     -- ========================================================================
     ELSIF v_lower ~ '(weather|temperature|climate|snow|winter|frost|freeze|high altitude|elevation)' THEN
         v_summary := 'Chitral district features rugged Hindu Kush mountain terrain ranging from 1,100m in Lower Chitral up to 3,700m at Shandur Pass. '
             || 'Plant operations face autumn recession flows in run-of-river hydro, sub-zero winter temperatures with penstock freezing risks, and high solar irradiance in upper valleys. '
             || 'Fleet telemetry currently reports stable conditions with ' || v_cur_output_mw::text || ' MW active generation across 11 sites.';
-
         v_kpis := jsonb_build_array(
             jsonb_build_object('label', 'Highest Site', 'value', '3,700m (Shandur)', 'trend', 'neutral'),
             jsonb_build_object('label', 'Live Fleet Output', 'value', v_cur_output_mw::text || ' MW', 'trend', 'up'),
             jsonb_build_object('label', 'Capacity Factor', 'value', v_cf_pct::text || '%', 'trend', 'up')
         );
-
         v_links := jsonb_build_array(
             jsonb_build_object('label', 'Sites Overview', 'route', '/sites'),
             jsonb_build_object('label', 'Alerts Triage', 'route', '/alerts')
         );
-
         v_followups := jsonb_build_array(
             'How many plants in Chitral currently?',
             'Which plants are producing least today, and are any offline or in maintenance?',
@@ -1439,7 +2005,7 @@ BEGIN
         );
 
     -- ========================================================================
-    -- CASE 5: Producing Least / Offline / Maintenance
+    -- 29. PRODUCING LEAST / OFFLINE / MAINTENANCE
     -- ========================================================================
     ELSIF v_lower ~ '(producing least|least|lowest|offline|maintenance|down|degraded|bottom)' THEN
         v_summary := 'Current bottom-producing and non-operational facilities across Chitral: '
@@ -1447,14 +2013,12 @@ BEGIN
             || '2. Degraded Performance: Chitral Town Hydro (1.0 MW) is running degraded with efficiency warnings on Units 01 & 02 (~65% efficiency vs 70% threshold). '
             || '3. Nighttime Zero-Output: Drosh Solar (1.0 MW), Booni Solar (1.5 MW), and Mastuj Solar (2.0 MW) are producing 0 kW pending sunrise. '
             || '4. Low Generation: Shandur Wind Pilot is outputting 29.1 kW (4.9% capacity factor), and Reshun Hydropower is generating 1.69 MW with Unit 02 offline for maintenance.';
-
         v_kpis := jsonb_build_array(
             jsonb_build_object('label', 'In Maintenance', 'value', '1 Site (Lawi)', 'trend', 'down'),
             jsonb_build_object('label', 'Degraded Operation', 'value', '1 Site (Chitral Town)', 'trend', 'down'),
             jsonb_build_object('label', 'Night Zero Output', 'value', '3 Solar Parks', 'trend', 'neutral'),
             jsonb_build_object('label', 'Offline Turbine', 'value', 'Reshun Unit 02', 'trend', 'down')
         );
-
         v_visuals := jsonb_build_array(
             jsonb_build_object(
                 'type', 'table',
@@ -1471,19 +2035,16 @@ BEGIN
                 )
             )
         );
-
         v_insights := jsonb_build_array(
             'Reshun Unit 02 offline fault is covered by active Work Order #3 assigned to Shahzada Iqbal.',
             'Lawi Hydropower is undergoing annual canal clearance and penstock valve maintenance.',
             'Solar output will resume when irradiance returns at ~06:35 PKT.'
         );
-
         v_links := jsonb_build_array(
             jsonb_build_object('label', 'Sites Overview', 'route', '/sites'),
             jsonb_build_object('label', 'Alerts Triage', 'route', '/alerts'),
             jsonb_build_object('label', 'Work Orders', 'route', '/work-orders')
         );
-
         v_followups := jsonb_build_array(
             'Show open critical alerts',
             'What work orders are due this week?',
@@ -1491,7 +2052,7 @@ BEGIN
         );
 
     -- ========================================================================
-    -- CASE 6: Alerts / Critical Alerts / Warnings
+    -- 30. ALERTS / CRITICAL ALERTS / WARNINGS
     -- ========================================================================
     ELSIF v_lower ~ '(alert|alerts|critical|warning|fault|alarm|issue|offline unit)' THEN
         v_summary := 'There are currently 9 open telemetry alerts across the Chitral fleet: 1 Critical and 8 Warnings. '
@@ -1499,14 +2060,12 @@ BEGIN
             || '• Key Warnings: Mastuj Inverter 03 running hot at 65.4 °C (limit 65 °C) and low efficiency (69.4%); '
             || 'Chitral Town Units 01 & 02 low efficiency at 66.7% and 64.7% (threshold 70%); '
             || 'and Shandur Turbine 01 reporting zero output while marked online.';
-
         v_kpis := jsonb_build_array(
             jsonb_build_object('label', 'Total Open Alerts', 'value', v_open_alerts::text || ' Alerts', 'trend', 'down'),
             jsonb_build_object('label', 'Critical Alerts', 'value', v_crit_alerts::text || ' Critical', 'trend', 'down'),
             jsonb_build_object('label', 'Warning Alerts', 'value', v_warn_alerts::text || ' Warnings', 'trend', 'neutral'),
             jsonb_build_object('label', 'Critical Asset', 'value', 'Reshun Unit 02', 'trend', 'down')
         );
-
         v_visuals := jsonb_build_array(
             jsonb_build_object(
                 'type', 'table',
@@ -1522,18 +2081,15 @@ BEGIN
                 )
             )
         );
-
         v_insights := jsonb_build_array(
             'Reshun Unit 02 has been triaged and is currently under active field investigation.',
             'Chitral Town Hydro turbine silt build-up is causing sub-optimal 65% efficiency ratings.',
             'Heat exchanger cleaning is recommended for Mastuj Inverter 03.'
         );
-
         v_links := jsonb_build_array(
             jsonb_build_object('label', 'Alerts Console', 'route', '/alerts'),
             jsonb_build_object('label', 'Work Orders', 'route', '/work-orders')
         );
-
         v_followups := jsonb_build_array(
             'What work orders are due this week?',
             'Which plants are producing least today?',
@@ -1541,22 +2097,20 @@ BEGIN
         );
 
     -- ========================================================================
-    -- CASE 7: Work Orders / Tasks / Due This Week
+    -- 31. WORK ORDERS / TASKS / DUE THIS WEEK / WHAT SHOULD I FIX FIRST
     -- ========================================================================
-    ELSIF v_lower ~ '(work order|work orders|task|tasks|fix|assignee|overdue|due|kanban|schedule)' THEN
+    ELSIF v_lower ~ '(work order|work orders|task|tasks|fix|assignee|overdue|due|kanban|schedule|what should i fix)' THEN
         v_summary := 'There are 4 work orders due this week across Chitral operations: '
-            || '• In Progress (High): Reshun Unit 02 turbine runner inspection (Assigned to Shahzada Iqbal). '
-            || '• Blocked (High): Shandur Inverter synchronization (Awaiting spare contactor relay parts). '
-            || '• Planned (Medium): Mastuj Solar inverter heat sink cleaning (Due in 2 days). '
-            || '• Planned (Low): Golen Gol intake silt gate inspection (Scheduled for weekend flow window).';
-
+            || '• In Progress (High Priority): Reshun Unit 02 turbine runner inspection (Assigned to Lead Field Engineer Shahzada Iqbal). '
+            || '• Blocked (High Priority): Shandur Inverter synchronization overhaul (Awaiting spare contactor relay parts). '
+            || '• Planned (Medium Priority): Mastuj Solar inverter heat sink cleaning (Due in 2 days). '
+            || '• Planned (Low Priority): Golen Gol intake silt gate inspection (Scheduled for weekend flow window).';
         v_kpis := jsonb_build_array(
             jsonb_build_object('label', 'Work Due This Week', 'value', v_work_orders_due::text || ' Orders', 'trend', 'neutral'),
             jsonb_build_object('label', 'In Progress', 'value', '1 Active', 'trend', 'up'),
             jsonb_build_object('label', 'Blocked', 'value', '1 Blocked', 'trend', 'down'),
             jsonb_build_object('label', 'Planned', 'value', '2 Planned', 'trend', 'neutral')
         );
-
         v_visuals := jsonb_build_array(
             jsonb_build_object(
                 'type', 'table',
@@ -1570,18 +2124,15 @@ BEGIN
                 )
             )
         );
-
         v_insights := jsonb_build_array(
             'Shahzada Iqbal has 2 high-priority work orders currently allocated.',
             'Shandur Inverter relay replacement part is in transit from Peshawar warehouse.',
             'Completion of Reshun Unit 02 will restore 2.1 MW generating capacity to Upper Chitral.'
         );
-
         v_links := jsonb_build_array(
             jsonb_build_object('label', 'Work Orders Kanban', 'route', '/work-orders'),
             jsonb_build_object('label', 'Alerts Triage', 'route', '/alerts')
         );
-
         v_followups := jsonb_build_array(
             'Show open critical alerts',
             'Which plants are producing least today, and are any offline or in maintenance?',
@@ -1589,23 +2140,72 @@ BEGIN
         );
 
     -- ========================================================================
-    -- CASE 8: Plant Count / Sites in Chitral / List Plants
+    -- 32. ABOUT THE WEBSITE / PROJECT PURPOSE (Strictly Bounded)
     -- ========================================================================
-    ELSIF v_lower ~ '(how many|plant|plants|site|sites|station|stations|count|list site|where are|breakdown)' THEN
+    ELSIF v_lower ~ '(\yabout (this|the)? (website|platform|system|gridpulse|dashboard)\y|what is (gridpulse|this platform|this website)|purpose of (gridpulse|this website)|tell.*about.*(website|platform|gridpulse)|what is this website for|what is this platform for)' THEN
+        v_summary := 'GridPulse is the operational AI platform and SCADA telemetry hub for Chitral district in Khyber Pakhtunkhwa, Pakistan. '
+            || 'It unifies real-time monitoring across 11 renewable energy generation plants (7 hydro, 3 solar, 1 wind) totaling 190.4 MW installed capacity, '
+            || 'providing high-altitude grid resilience, automated alert triage across 29 generating assets, and maintenance work orders. '
+            || 'Current fleet generation is ' || v_cur_output_mw::text || ' MW (' || v_cf_pct::text || '% capacity factor) with ' || v_avail_pct::text || '% fleet availability.';
+        IF p_role = 'admin' THEN
+            v_summary := v_summary || ' As an Administrator, you have full fleet visibility, user management, and complete audit logging.';
+        ELSIF p_role = 'engineer' THEN
+            v_summary := v_summary || ' As an Engineer, your console highlights active telemetry alarms and field work order dispatches.';
+        ELSE
+            v_summary := v_summary || ' As a Viewer, you have read-only access to generation telemetry, plant metrics, and performance reports.';
+        END IF;
+        v_kpis := jsonb_build_array(
+            jsonb_build_object('label', 'Live Fleet Output', 'value', v_cur_output_mw::text || ' MW', 'trend', 'up'),
+            jsonb_build_object('label', 'Total Capacity', 'value', v_cap_mw::text || ' MW', 'trend', 'neutral'),
+            jsonb_build_object('label', 'Capacity Factor', 'value', v_cf_pct::text || '%', 'trend', 'up'),
+            jsonb_build_object('label', 'Monitored Plants', 'value', '11 Sites', 'trend', 'neutral')
+        );
+        v_visuals := jsonb_build_array(
+            jsonb_build_object(
+                'type', 'bar',
+                'title', 'Chitral Fleet Capacity by Technology',
+                'x', 'tech',
+                'series', jsonb_build_array(jsonb_build_object('key', 'capacity', 'label', 'Capacity (MW)')),
+                'data', jsonb_build_array(
+                    jsonb_build_object('tech', 'Hydro (7 plants)', 'capacity', 185.3),
+                    jsonb_build_object('tech', 'Solar (3 parks)', 'capacity', 4.5),
+                    jsonb_build_object('tech', 'Wind (1 pilot)', 'capacity', 0.6)
+                ),
+                'unit', 'MW'
+            )
+        );
+        v_insights := jsonb_build_array(
+            'Hydro power carries 99.9% of current nighttime generation, anchored by Golen Gol (108 MW) and Lawi (69 MW).',
+            'Solar parks in Drosh, Booni, and Mastuj are currently at 0 kW output during nighttime hours and will ramp after sunrise (06:35 PKT).',
+            '1 site is in scheduled maintenance (Lawi Hydropower) and 1 is running degraded (Chitral Town Hydro).'
+        );
+        v_links := jsonb_build_array(
+            jsonb_build_object('label', 'Sites Overview', 'route', '/sites'),
+            jsonb_build_object('label', 'Generation Reports', 'route', '/reports'),
+            jsonb_build_object('label', 'Alerts Triage', 'route', '/alerts')
+        );
+        v_followups := jsonb_build_array(
+            'How many plants in Chitral currently?',
+            'Which plants are producing least today, and are any offline or in maintenance?',
+            'Show open critical alerts'
+        );
+
+    -- ========================================================================
+    -- 33. PLANT COUNT / SITES IN CHITRAL (Word-Bounded)
+    -- ========================================================================
+    ELSIF v_lower ~ '(how many|\yplants?\y|\ysites?\y|\ystations?\y|count|list site|where are|breakdown)' THEN
         v_summary := 'There are currently 11 renewable energy generation plants operating across Chitral district, Khyber Pakhtunkhwa, '
             || 'with a combined installed capacity of 190.4 MW across 29 generating assets: '
             || '7 Hydro stations (185.3 MW total: Golen Gol 108 MW, Lawi 69 MW, Reshun 4.2 MW, Shishi 1.8 MW, Chitral Town 1.0 MW, Bumburet 0.8 MW, Garam Chashma 0.5 MW); '
             || '3 Solar PV parks (4.5 MW total: Mastuj 2.0 MW, Booni 1.5 MW, Drosh 1.0 MW); '
             || 'and 1 Wind turbine site (Shandur Wind Pilot 0.6 MW). '
             || 'Currently, 9 plants are online, 1 is in maintenance (Lawi), and 1 is operating degraded (Chitral Town Hydro).';
-
         v_kpis := jsonb_build_array(
             jsonb_build_object('label', 'Total Plants', 'value', '11 Sites', 'trend', 'neutral'),
             jsonb_build_object('label', 'Hydro Capacity', 'value', '185.3 MW', 'trend', 'neutral'),
             jsonb_build_object('label', 'Solar Capacity', 'value', '4.5 MW', 'trend', 'neutral'),
             jsonb_build_object('label', 'Wind Capacity', 'value', '0.6 MW', 'trend', 'neutral')
         );
-
         v_visuals := jsonb_build_array(
             jsonb_build_object(
                 'type', 'table',
@@ -1626,18 +2226,15 @@ BEGIN
                 )
             )
         );
-
         v_insights := jsonb_build_array(
             'Lower Chitral contains 93.8% of capacity (Golen Gol and Lawi), anchoring regional grid stability.',
             'Upper Chitral and Kalash Valleys are powered by localized run-of-river hydro and solar micro-grids.',
             'Fleet availability stands at ' || v_avail_pct::text || '% across all 29 turbine and inverter units.'
         );
-
         v_links := jsonb_build_array(
             jsonb_build_object('label', 'Sites Overview', 'route', '/sites'),
             jsonb_build_object('label', 'Fleet Reports', 'route', '/reports')
         );
-
         v_followups := jsonb_build_array(
             'Which plants are producing least today, and are any offline or in maintenance?',
             'Show open critical alerts',
@@ -1645,64 +2242,29 @@ BEGIN
         );
 
     -- ========================================================================
-    -- CASE 9: About the Website / Project Purpose / Overview
+    -- 34. OUT-OF-SCOPE / NON-OPERATIONAL GUARDRAIL
     -- ========================================================================
-    ELSIF v_lower ~ '(about|what is this|purpose|platform|gridpulse|explain website|tell.*about.*website|what.*for)' THEN
-        v_summary := 'GridPulse is the operational AI platform and SCADA telemetry hub for Chitral district in Khyber Pakhtunkhwa, Pakistan. '
-            || 'It unifies real-time monitoring across 11 renewable energy generation plants (7 hydro, 3 solar, 1 wind) totaling 190.4 MW installed capacity, '
-            || 'providing high-altitude grid resilience, automated alert triage across 29 generating assets, and maintenance work orders. '
-            || 'Current fleet generation is ' || v_cur_output_mw::text || ' MW (' || v_cf_pct::text || '% capacity factor) with ' || v_avail_pct::text || '% fleet availability.';
-
-        IF p_role = 'admin' THEN
-            v_summary := v_summary || ' As an Administrator, you have full fleet visibility, user management, and complete audit logging.';
-        ELSIF p_role = 'engineer' THEN
-            v_summary := v_summary || ' As an Engineer, your console highlights active telemetry alarms and field work order dispatches.';
-        ELSE
-            v_summary := v_summary || ' As a Viewer, you have read-only access to generation telemetry, plant metrics, and performance reports.';
-        END IF;
-
+    ELSIF v_lower ~ '\y(pizza|burger|food|recipe|capital of|poem|movie|song|lyrics|crypto|bitcoin|stock market|president of|prime minister)\y' THEN
+        v_summary := 'I am PulseBot, the dedicated AI operations copilot for GridPulse Chitral. '
+            || 'My domain is specialized in renewable energy generation monitoring across 11 hydro, solar, and wind plants in Chitral, Khyber Pakhtunkhwa. '
+            || 'I cannot assist with general non-energy inquiries, but I can provide live SCADA generation statistics, asset diagnostics, open telemetry alerts, and maintenance work orders across our 190.4 MW fleet. How can I assist your plant operations?';
         v_kpis := jsonb_build_array(
             jsonb_build_object('label', 'Live Fleet Output', 'value', v_cur_output_mw::text || ' MW', 'trend', 'up'),
-            jsonb_build_object('label', 'Total Capacity', 'value', v_cap_mw::text || ' MW', 'trend', 'neutral'),
             jsonb_build_object('label', 'Capacity Factor', 'value', v_cf_pct::text || '%', 'trend', 'up'),
-            jsonb_build_object('label', 'Monitored Plants', 'value', '11 Sites', 'trend', 'neutral')
+            jsonb_build_object('label', 'Monitored Sites', 'value', '11 Plants', 'trend', 'neutral')
         );
-
-        v_visuals := jsonb_build_array(
-            jsonb_build_object(
-                'type', 'bar',
-                'title', 'Chitral Fleet Capacity by Technology',
-                'x', 'tech',
-                'series', jsonb_build_array(jsonb_build_object('key', 'capacity', 'label', 'Capacity (MW)')),
-                'data', jsonb_build_array(
-                    jsonb_build_object('tech', 'Hydro (7 plants)', 'capacity', 185.3),
-                    jsonb_build_object('tech', 'Solar (3 parks)', 'capacity', 4.5),
-                    jsonb_build_object('tech', 'Wind (1 pilot)', 'capacity', 0.6)
-                ),
-                'unit', 'MW'
-            )
-        );
-
-        v_insights := jsonb_build_array(
-            'Hydro power carries 99.9% of current nighttime generation, anchored by Golen Gol (108 MW) and Lawi (69 MW).',
-            'Solar parks in Drosh, Booni, and Mastuj are currently at 0 kW output during nighttime hours and will ramp after sunrise (06:35 PKT).',
-            '1 site is in scheduled maintenance (Lawi Hydropower) and 1 is running degraded (Chitral Town Hydro).'
-        );
-
         v_links := jsonb_build_array(
             jsonb_build_object('label', 'Sites Overview', 'route', '/sites'),
-            jsonb_build_object('label', 'Generation Reports', 'route', '/reports'),
-            jsonb_build_object('label', 'Alerts Triage', 'route', '/alerts')
+            jsonb_build_object('label', 'Generation Reports', 'route', '/reports')
         );
-
         v_followups := jsonb_build_array(
+            'What is the fleet status today?',
             'How many plants in Chitral currently?',
-            'Which plants are producing least today, and are any offline or in maintenance?',
             'Show open critical alerts'
         );
 
     -- ========================================================================
-    -- CASE 10: Default / Live Fleet Status & Generation
+    -- 35. DEFAULT: LIVE FLEET STATUS & GENERATION OVERVIEW
     -- ========================================================================
     ELSE
         v_summary := 'Chitral renewable fleet is currently generating ' || v_cur_output_mw::text || ' MW '
@@ -1710,14 +2272,12 @@ BEGIN
             || 'Cumulative energy generation today is ' || v_today_gwh::text || ' GWh since midnight UTC. '
             || '9 of 11 sites are online, 1 is in scheduled maintenance (Lawi Hydropower, 69 MW), and 1 is operating degraded (Chitral Town Hydro, 1 MW). '
             || 'Hydro facilities are currently meeting 99.9% of total district load.';
-
         v_kpis := jsonb_build_array(
             jsonb_build_object('label', 'Live Fleet Output', 'value', v_cur_output_mw::text || ' MW', 'trend', 'up'),
             jsonb_build_object('label', 'Capacity Factor', 'value', v_cf_pct::text || '%', 'trend', 'up'),
             jsonb_build_object('label', 'Fleet Availability', 'value', v_avail_pct::text || '%', 'trend', 'neutral'),
             jsonb_build_object('label', 'Energy Today', 'value', v_today_gwh::text || ' GWh', 'trend', 'up')
         );
-
         v_visuals := jsonb_build_array(
             jsonb_build_object(
                 'type', 'bar',
@@ -1734,19 +2294,16 @@ BEGIN
                 'unit', 'MW'
             )
         );
-
         v_insights := jsonb_build_array(
             'Golen Gol Hydropower (108 MW) is delivering 68% of total live generation output.',
             'Lawi Hydropower (69 MW) is producing 37.1 MW while undergoing partial maintenance overhaul.',
             'District night demand is comfortably supported by active run-of-river hydro stations.'
         );
-
         v_links := jsonb_build_array(
             jsonb_build_object('label', 'Sites Overview', 'route', '/sites'),
             jsonb_build_object('label', 'Generation Reports', 'route', '/reports'),
             jsonb_build_object('label', 'Alerts Console', 'route', '/alerts')
         );
-
         v_followups := jsonb_build_array(
             'How many plants in Chitral currently?',
             'Which plants are producing least today, and are any offline or in maintenance?',
@@ -1779,7 +2336,14 @@ DECLARE
     v_links jsonb;
     v_followups jsonb;
 BEGIN
-    IF v_lower ~ '(who (build|built|created|made|developed)|creator|author|who are you|what is your name|hello\b|hi\b|hey\b)' THEN
+    IF v_lower ~ '\y(thank|thanks|thx|appreciate|good job|great job)\y' THEN
+        v_summary := 'You are very welcome! Feel free to ask any questions about GridPulse and Chitral''s 190.4 MW renewable energy fleet.';
+        v_bullets := jsonb_build_array(
+            'GridPulse monitors 11 generation plants across Upper and Lower Chitral.',
+            'You can explore live operations by logging in with one of our demo accounts (Admin, Engineer, Viewer).',
+            'Telemetry updates continuously in 5-second intervals.'
+        );
+    ELSIF v_lower ~ '(who (build|built|created|made|developed)|creator|author|who are you|what is your name|\y(hello|hi|hey)\y)' THEN
         v_summary := 'I am PulseBot, the public FAQ assistant on GridPulse, built and created by the GridPulse engineering team.';
         v_bullets := jsonb_build_array(
             'GridPulse monitors 11 renewable energy plants across Chitral district in Khyber Pakhtunkhwa, Pakistan.',
@@ -1793,13 +2357,20 @@ BEGIN
             'Engineer: engineer@gridpulse.io (password: Engineer12345) — Alert triage, telemetry controls, and work order dispatching.',
             'Viewer: viewer@gridpulse.io (password: Viewer12345) — Read-only generation dashboards and downloadable CSV reports.'
         );
-    ELSIF v_lower ~ '(plant|plants|site|sites|chitral|where|how many)' THEN
+    ELSIF v_lower ~ '(\yplants?\y|\ysites?\y|chitral|where|how many)' THEN
         v_summary := 'GridPulse monitors 11 generation plants across Chitral district, Khyber Pakhtunkhwa, totaling 190.4 MW of renewable capacity.';
         v_bullets := jsonb_build_array(
             '7 Hydroelectric Plants (185.3 MW): Golen Gol (108 MW), Lawi (69 MW), Reshun (4.2 MW), Shishi, Chitral Town, Bumburet, and Garam Chashma.',
             '3 Solar PV Parks (4.5 MW): Mastuj Solar (2.0 MW), Booni Solar (1.5 MW), and Drosh Solar (1.0 MW).',
             '1 Wind Pilot (0.6 MW): Shandur Wind Pilot situated at 3,700m elevation.',
             'Monitors 29 generating assets with live 5-second telemetry streams.'
+        );
+    ELSIF v_lower ~ '\y(solar|hydro|wind)\y' THEN
+        v_summary := 'Chitral utilizes a diversified high-altitude renewable energy mix totaling 190.4 MW:';
+        v_bullets := jsonb_build_array(
+            'Hydro (185.3 MW, 7 stations): Anchored by 108 MW Golen Gol and 69 MW Lawi, carrying base load.',
+            'Solar (4.5 MW, 3 parks): Mastuj, Booni, and Drosh PV parks delivering daytime peak power.',
+            'Wind (0.6 MW, 1 pilot): Shandur Pass alpine wind generation at 3,700m.'
         );
     ELSE
         v_summary := 'GridPulse is the unified real-time renewable energy operations and SCADA monitoring platform for Chitral district in Khyber Pakhtunkhwa, Pakistan.';

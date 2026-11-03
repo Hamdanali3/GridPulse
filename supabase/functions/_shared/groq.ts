@@ -14,7 +14,7 @@ import {
   validateSessionResponse,
 } from './schema.ts';
 
-export const DEFAULT_GROQ_MODEL = 'llama-3.3-70b-versatile';
+export const DEFAULT_GROQ_MODEL = 'openai/gpt-oss-120b';
 const MAX_TOOL_ROUNDS = 4;
 
 export interface ChatTurn {

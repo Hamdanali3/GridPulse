@@ -1343,8 +1343,8 @@ BEGIN
     v_today := COALESCE(v_ctx->>'today', TO_CHAR(NOW() AT TIME ZONE 'Asia/Karachi', 'YYYY-MM-DD'));
     v_tz := COALESCE(v_ctx->>'timezone', 'Asia/Karachi');
 
-    -- 2. Rate limit (25 req per 5 min)
-    v_rl := public.gp_assistant_check_rate_limit('user', v_user_id::text, 25, 300);
+    -- 2. Rate limit (150 req per 5 min for authenticated users)
+    v_rl := public.gp_assistant_check_rate_limit('user', v_user_id::text, 150, 300);
     IF NOT COALESCE((v_rl->>'allowed')::boolean, true) THEN
         RETURN jsonb_build_object('success', false, 'error', jsonb_build_object('code', 'RATE_LIMITED', 'message', 'Rate limit exceeded. Please wait a moment.'));
     END IF;
@@ -1398,19 +1398,19 @@ BEGIN
         jsonb_build_object('role', 'user', 'content', p_message)
     );
 
-    -- 5. Tool schemas catalog
+    -- 5. Tool schemas catalog (allowing nullable parameters to prevent model tool-validation errors)
     v_tools := jsonb_build_array(
         jsonb_build_object('type', 'function', 'function', jsonb_build_object('name', 'fleet_overview', 'description', 'Fleet current output, capacity factor, availability, site status counts', 'parameters', jsonb_build_object('type', 'object', 'properties', '{}'::jsonb))),
-        jsonb_build_object('type', 'function', 'function', jsonb_build_object('name', 'site_summary', 'description', 'Site operational metrics and asset health', 'parameters', jsonb_build_object('type', 'object', 'properties', jsonb_build_object('site_id', jsonb_build_object('type', 'integer'), 'name', jsonb_build_object('type', 'string'))))),
-        jsonb_build_object('type', 'function', 'function', jsonb_build_object('name', 'list_sites', 'description', 'Lookup sites by status or technology', 'parameters', jsonb_build_object('type', 'object', 'properties', jsonb_build_object('technology', jsonb_build_object('type', 'string'), 'status', jsonb_build_object('type', 'string'))))),
-        jsonb_build_object('type', 'function', 'function', jsonb_build_object('name', 'list_assets', 'description', 'Lookup assets', 'parameters', jsonb_build_object('type', 'object', 'properties', jsonb_build_object('site_id', jsonb_build_object('type', 'integer'), 'status', jsonb_build_object('type', 'string'))))),
-        jsonb_build_object('type', 'function', 'function', jsonb_build_object('name', 'generation_timeseries', 'description', 'Timeseries generation data by site or tech', 'parameters', jsonb_build_object('type', 'object', 'properties', jsonb_build_object('range', jsonb_build_object('type', 'string'), 'scope', jsonb_build_object('type', 'string'))))),
-        jsonb_build_object('type', 'function', 'function', jsonb_build_object('name', 'alerts_summary', 'description', 'Alert counts by severity and status', 'parameters', jsonb_build_object('type', 'object', 'properties', jsonb_build_object('status', jsonb_build_object('type', 'string'))))),
-        jsonb_build_object('type', 'function', 'function', jsonb_build_object('name', 'list_alerts', 'description', 'List recent alerts', 'parameters', jsonb_build_object('type', 'object', 'properties', jsonb_build_object('severity', jsonb_build_object('type', 'string'), 'limit', jsonb_build_object('type', 'integer'))))),
-        jsonb_build_object('type', 'function', 'function', jsonb_build_object('name', 'work_orders_summary', 'description', 'Work orders breakdown by status and priority', 'parameters', jsonb_build_object('type', 'object', 'properties', jsonb_build_object('scope', jsonb_build_object('type', 'string'))))),
-        jsonb_build_object('type', 'function', 'function', jsonb_build_object('name', 'work_orders_list', 'description', 'List work orders', 'parameters', jsonb_build_object('type', 'object', 'properties', jsonb_build_object('status', jsonb_build_object('type', 'string'), 'priority', jsonb_build_object('type', 'string'), 'limit', jsonb_build_object('type', 'integer'))))),
-        jsonb_build_object('type', 'function', 'function', jsonb_build_object('name', 'energy_report', 'description', 'Energy generation breakdown', 'parameters', jsonb_build_object('type', 'object', 'properties', jsonb_build_object('range', jsonb_build_object('type', 'string'), 'group_by', jsonb_build_object('type', 'string'))))),
-        jsonb_build_object('type', 'function', 'function', jsonb_build_object('name', 'project_knowledge', 'description', 'Chitral grid project knowledge', 'parameters', jsonb_build_object('type', 'object', 'properties', jsonb_build_object('query', jsonb_build_object('type', 'string')))))
+        jsonb_build_object('type', 'function', 'function', jsonb_build_object('name', 'site_summary', 'description', 'Site operational metrics and asset health', 'parameters', jsonb_build_object('type', 'object', 'properties', jsonb_build_object('site_id', jsonb_build_object('type', jsonb_build_array('integer', 'null')), 'name', jsonb_build_object('type', jsonb_build_array('string', 'null')))))),
+        jsonb_build_object('type', 'function', 'function', jsonb_build_object('name', 'list_sites', 'description', 'Lookup sites by status or technology', 'parameters', jsonb_build_object('type', 'object', 'properties', jsonb_build_object('technology', jsonb_build_object('type', jsonb_build_array('string', 'null')), 'status', jsonb_build_object('type', jsonb_build_array('string', 'null')))))),
+        jsonb_build_object('type', 'function', 'function', jsonb_build_object('name', 'list_assets', 'description', 'Lookup assets', 'parameters', jsonb_build_object('type', 'object', 'properties', jsonb_build_object('site_id', jsonb_build_object('type', jsonb_build_array('integer', 'null')), 'status', jsonb_build_object('type', jsonb_build_array('string', 'null')))))),
+        jsonb_build_object('type', 'function', 'function', jsonb_build_object('name', 'generation_timeseries', 'description', 'Timeseries generation data by site or tech', 'parameters', jsonb_build_object('type', 'object', 'properties', jsonb_build_object('range', jsonb_build_object('type', jsonb_build_array('string', 'null')), 'scope', jsonb_build_object('type', jsonb_build_array('string', 'null')))))),
+        jsonb_build_object('type', 'function', 'function', jsonb_build_object('name', 'alerts_summary', 'description', 'Alert counts by severity and status', 'parameters', jsonb_build_object('type', 'object', 'properties', jsonb_build_object('status', jsonb_build_object('type', jsonb_build_array('string', 'null')))))),
+        jsonb_build_object('type', 'function', 'function', jsonb_build_object('name', 'list_alerts', 'description', 'List recent alerts', 'parameters', jsonb_build_object('type', 'object', 'properties', jsonb_build_object('severity', jsonb_build_object('type', jsonb_build_array('string', 'null')), 'limit', jsonb_build_object('type', jsonb_build_array('integer', 'null')))))),
+        jsonb_build_object('type', 'function', 'function', jsonb_build_object('name', 'work_orders_summary', 'description', 'Work orders breakdown by status and priority', 'parameters', jsonb_build_object('type', 'object', 'properties', jsonb_build_object('scope', jsonb_build_object('type', jsonb_build_array('string', 'null')))))),
+        jsonb_build_object('type', 'function', 'function', jsonb_build_object('name', 'work_orders_list', 'description', 'List work orders', 'parameters', jsonb_build_object('type', 'object', 'properties', jsonb_build_object('status', jsonb_build_object('type', jsonb_build_array('string', 'null')), 'priority', jsonb_build_object('type', jsonb_build_array('string', 'null')), 'limit', jsonb_build_object('type', jsonb_build_array('integer', 'null')))))),
+        jsonb_build_object('type', 'function', 'function', jsonb_build_object('name', 'energy_report', 'description', 'Energy generation breakdown', 'parameters', jsonb_build_object('type', 'object', 'properties', jsonb_build_object('range', jsonb_build_object('type', jsonb_build_array('string', 'null')), 'group_by', jsonb_build_object('type', jsonb_build_array('string', 'null')))))),
+        jsonb_build_object('type', 'function', 'function', jsonb_build_object('name', 'project_knowledge', 'description', 'Chitral grid project knowledge', 'parameters', jsonb_build_object('type', 'object', 'properties', jsonb_build_object('query', jsonb_build_object('type', jsonb_build_array('string', 'null'))))))
     );
 
     -- 6. Interactive Multi-Round Loop (up to 3 rounds)
@@ -1656,7 +1656,7 @@ DECLARE
     v_latency int;
     v_ip_ident text := COALESCE(NULLIF(TRIM(p_ip), ''), 'anon_public');
 BEGIN
-    v_rl := public.gp_assistant_check_rate_limit('public_ip', v_ip_ident, 20, 300);
+    v_rl := public.gp_assistant_check_rate_limit('public_ip', v_ip_ident, 100, 300);
     IF NOT COALESCE((v_rl->>'allowed')::boolean, true) THEN
         RETURN jsonb_build_object(
             'success', false,

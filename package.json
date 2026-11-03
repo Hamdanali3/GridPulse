@@ -10,7 +10,8 @@
     "typecheck": "npm run typecheck:client && npm run typecheck:functions",
     "typecheck:client": "npm --prefix client run lint",
     "typecheck:functions": "node client/node_modules/typescript/bin/tsc -p supabase/functions/tsconfig.json --noEmit",
-    "test:assistant": "npm --prefix client run test:assistant"
+    "test:assistant": "npm --prefix client run test:assistant",
+    "qa:master": "node scripts/qa-master-suite.mjs"
   }
 }
 

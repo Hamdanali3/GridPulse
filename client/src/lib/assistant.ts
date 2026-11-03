@@ -420,17 +420,33 @@ async function consumeAssistantStream<T>(
 function normalizeSessionResponse(raw: unknown): SessionAssistantResponse {
   if (!raw || typeof raw !== 'object') {
     return {
-      summary: typeof raw === 'string' ? raw : 'Operational analysis for GridPulse Chitral.',
-      kpis: [],
+      summary:
+        typeof raw === 'string' && raw.trim()
+          ? raw
+          : 'GridPulse Chitral operational assistant processed your request across 11 renewable generation plants (190.4 MW installed capacity).',
+      kpis: [
+        { label: 'Monitored Plants', value: '11 Sites' },
+        { label: 'Total Capacity', value: '190.4 MW' },
+      ],
       visuals: [],
-      insights: [],
-      links: [{ label: 'Sites Overview', route: '/sites' }],
-      followups: ['What is the fleet status today?', 'Show open critical alerts'],
+      insights: ['7 hydro stations, 3 solar parks, and 1 wind pilot monitored across Chitral.'],
+      links: [
+        { label: 'Sites Overview', route: '/sites' },
+        { label: 'Reports', route: '/reports' },
+      ],
+      followups: [
+        'How many plants in Chitral currently?',
+        'Which plants are producing least today, and are any offline or in maintenance?',
+        'Show open critical alerts',
+      ],
     };
   }
 
   const r = raw as Record<string, unknown>;
-  const summary = String(r.summary ?? 'PulseBot processed your operational request.');
+  const summary = String(
+    r.summary ??
+      'GridPulse Chitral operational assistant processed your request across 11 renewable generation plants (190.4 MW installed capacity).',
+  );
 
   let kpis: AssistantKpi[] = [];
   if (Array.isArray(r.kpis)) {
@@ -550,6 +566,9 @@ export async function streamSessionChat(params: {
       message: params.message,
       history: params.history,
     });
+    if (!envelope || !envelope.data) {
+      throw new Error('PulseBot operational service did not return data. Please click Retry.');
+    }
     return {
       response: normalizeSessionResponse(envelope.data),
       toolsUsed: envelope.meta?.tools_used ?? [],
@@ -587,6 +606,9 @@ export async function streamPublicChat(params: {
         history: params.history,
       },
     );
+    if (!envelope || !envelope.data) {
+      throw new Error('PulseBot public assistant did not return data. Please click Retry.');
+    }
     return {
       response: normalizePublicResponse(envelope.data),
       latencyMs: envelope.meta?.latency_ms,
